@@ -49,9 +49,9 @@ void setup(){
    //car bootup sequence
    colorWipe(strip.Color(255, 0, 0), 50); //red
    delay(50*52); //enough time for the host PC to boot up
-   colorWipe(strip.Color(0, 0, 255), 50); //blue
-   delay(50*52); //enough time for the host PC to launch services
    colorWipe(strip.Color(0, 255, 0), 50); //green
+   delay(50*52); //enough time for the host PC to launch services
+   colorWipe(strip.Color(0, 0, 255), 50); //blue
    
    nh.initNode();
    nh.advertise(odom_pub);
