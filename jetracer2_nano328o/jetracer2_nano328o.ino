@@ -1,10 +1,10 @@
 /*
 ==========
-Arduino Nano code for the ROSCar
-This code implements the following functions:
+Arduino Nano code for the ROSCar (Jetracer2)
+This code implements the following functionality:
   > Odometry (linear speed/distance) using a hall effect sensor
   > NeoPixel LED control to indicate ROSCar modes
-  > ROS Serial communication with Host PC (Jetson Nano or RPi)
+  > ROS Serial communication with Host PC (Jetson Nano)
 by Aditya Kamath
 adityakamath.github.io
 github.com/adityakamath
@@ -62,28 +62,18 @@ void loop(){
       
       //calculate time since last shaft rotation
       time_elapsed = (millis() - time_old)/1000.00; //seconds
-      //Serial.print("Time since last 3 rotation: ");
-      //Serial.print(time_elapsed);
-      //Serial.println(" seconds");
       
       //calculate RPM using elapsed time and number of ticks since last shaft rotation
       shaft_rpm = (ticks*60.00) / (TICKS_PER_ROTATION*time_elapsed); //rotations per minute
-      //Serial.print("Shaft RPM is: ");
-      //Serial.print(shaft_rpm);
-      //Serial.println(" rotations per minute");
       
       //calculate linear speed using the TICKS_PER_10CM ratio
       lin_speed = ticks / (TICKS_PER_10CM*time_elapsed*10.00); //meters per second
-      //Serial.print("Speed is: ");
-      //Serial.print(lin_speed);
-      //Serial.println(" meters per second");
-
-      //send via ROS serial
 
       //store current time and reset ticks to 0
       time_old = millis();
       ticks = 0;
 
+      //publish via ROS serial
       odom_msg.data = lin_speed;
       odom_pub.publish( &odom_msg );
       nh.spinOnce();
@@ -95,8 +85,6 @@ void loop(){
 //ISR to increment tick value every time a rising edge is sensed by the interrupt pin
 void detect_magnet(){
    ticks++;
-   //Serial.print("detect");
-   //Serial.println(ticks);
 }
 
 //wipe user specified color over all 8 LEDS
