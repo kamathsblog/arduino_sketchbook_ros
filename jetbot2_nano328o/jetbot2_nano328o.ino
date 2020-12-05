@@ -25,7 +25,7 @@ std_msgs::Int8 mode_msg;
 void message_callback(const std_msgs::Int8& msg){
     switch(msg.data){
         case 0: 
-            colorWipe(strip.Color(255, 255, 0), 10); //yellow
+            colorWipe(strip.Color(255, 255, 255), 10); //white
             break;
         case 1: 
             colorWipe(strip.Color(255, 0, 0), 10); //red
