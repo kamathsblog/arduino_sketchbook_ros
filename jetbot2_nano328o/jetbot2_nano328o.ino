@@ -49,19 +49,21 @@ void setup(){
    //setup neopixel strip
    strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
    strip.show();            // Turn OFF all pixels ASAP
-   strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
+   strip.setBrightness(55); // Set BRIGHTNESS to about 1/5 (max = 255)
 
    //car bootup sequence
    mode_msg.data = 0;
-   colorWipe(strip.Color(153, 51, 255), 10); //purple
-   
+   colorWipe(strip.Color(127, 0, 255), 10); //purple
    nh.initNode();
    nh.subscribe(mode_sub);
 }
 
-void loop(){     
-    nh.spinOnce();
-    delay(10);
+void loop(){
+  if(!nh.connected()){
+    colorWipe(strip.Color(127, 0, 255), 10); //purple
+  }
+  nh.spinOnce();
+  delay(10);
 }
 
 //wipe user specified color over all 8 LEDS
