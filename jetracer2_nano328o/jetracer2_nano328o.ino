@@ -3,7 +3,7 @@
 Arduino Nano code for the ROSCar (Jetracer2)
 This code implements the following functionality:
   > Odometry (linear speed/distance) using a hall effect sensor
-  > NeoPixel LED control to indicate ROSCar modes
+  > NeoPixel LED control to indicate ROSCar modes (TO DO)
   > ROS Serial communication with Host PC (Jetson Nano)
 by Aditya Kamath
 adityakamath.github.io
