@@ -22,10 +22,12 @@ github.com/adityakamath
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 #define LOADER_PIN 5
-#define RESOLUTION 1
+#define RESOLUTION 2
 #define MAX_VAL    138
+#define MIN_VAL    50
 Servo loader;
 int pos = 0;
+int load_cmd = 0;
 
 ros::NodeHandle nh;
 std_msgs::Int8 mode_msg;
@@ -52,23 +54,8 @@ void message_callback(const std_msgs::Int8& msg){
 }
 
 void loader_callback(const std_msgs::Int8& msg){
-    switch(msg.data){
-        case 1: 
-            //move up
-            move_loader_up(0);
-            break;
-        case 2: 
-            //move down
-            move_loader_down(0);
-            break;
-        case 0: 
-            loader.write(pos);
-            break;     
-        default:
-            break;     
-    }
+    load_cmd = msg.data;
 }
-
 
 ros::Subscriber<std_msgs::Int8> mode_sub("/joy_node/mode", &message_callback);
 ros::Subscriber<std_msgs::Int8> loader_sub("/switch_node/loader", &loader_callback);
@@ -99,6 +86,19 @@ void loop(){
     colorWipe(strip.Color(127, 0, 255), 10); //purple
   }
   nh.spinOnce();
+  switch(load_cmd){
+      case 1: 
+          //move up
+          move_loader_up();
+          break;
+      case 2: 
+          //move down
+          move_loader_down();
+          break;
+      case 0: 
+          //loader.write(pos);
+          break;         
+  }
   delay(10);
 }
 
@@ -111,30 +111,23 @@ void colorWipe(uint32_t color, int wait) {
   }
 }
 
-void move_loader_up(int wait){
+void move_loader_up(){
   pos -= RESOLUTION;
-  
-  if(pos > MAX_VAL){
-    pos = MAX_VAL;
-  }
-  else if(pos < 0){
-    pos = 0;
-  }
-  
-  delay(wait);
+  pos_limit_check();
   loader.write(pos);
 }
 
-void move_loader_down(int wait){
+void move_loader_down(){
   pos += RESOLUTION;
-  
+  pos_limit_check();
+  loader.write(pos);
+}
+
+void pos_limit_check(){
   if(pos > MAX_VAL){
     pos = MAX_VAL;
   }
-  else if(pos < 0){
-    pos = 0;
+  else if(pos < MIN_VAL){
+    pos = MIN_VAL;
   }
-  
-  delay(wait);
-  loader.write(pos);
 }
