@@ -22,11 +22,9 @@ github.com/adityakamath
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 #define LOADER_PIN 5
-#define RESOLUTION 2
 #define MAX_VAL    138
 #define MIN_VAL    50
 Servo loader;
-int pos = 0;
 int load_cmd = 0;
 
 ros::NodeHandle nh;
@@ -90,15 +88,12 @@ void loop(){
       case 1: 
           //move up
           loader.write(MIN_VAL);
-          //move_loader_up();
           break;
       case 2: 
           //move down
           loader.write(MAX_VAL);
-          move_loader_down();
           break;
       case 0: 
-          //loader.write(pos);
           break;         
   }
   delay(10);
@@ -110,26 +105,5 @@ void colorWipe(uint32_t color, int wait) {
     strip.setPixelColor(i, color);         //  Set pixel's color (in RAM)
     strip.show();                          //  Update strip to match
     delay(wait);                           //  Pause for a moment
-  }
-}
-
-void move_loader_up(){
-  pos -= RESOLUTION;
-  pos_limit_check();
-  loader.write(pos);
-}
-
-void move_loader_down(){
-  pos += RESOLUTION;
-  pos_limit_check();
-  loader.write(pos);
-}
-
-void pos_limit_check(){
-  if(pos > MAX_VAL){
-    pos = MAX_VAL;
-  }
-  else if(pos < MIN_VAL){
-    pos = MIN_VAL;
   }
 }
