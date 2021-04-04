@@ -89,10 +89,12 @@ void loop(){
   switch(load_cmd){
       case 1: 
           //move up
-          move_loader_up();
+          loader.write(MIN_VAL);
+          //move_loader_up();
           break;
       case 2: 
           //move down
+          loader.write(MAX_VAL);
           move_loader_down();
           break;
       case 0: 
