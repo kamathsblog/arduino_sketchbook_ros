@@ -2,7 +2,8 @@
 ==========
 Arduino Nano code for the Jetbot2
 This code implements the following functionality:
-  > NeoPixel LED control to indicate ROSCar modes
+  > NeoPixel LED control to indicate ROSCar modes (subscriber)
+  > Drive servo motor (for loader attachment) from incoming commands (subscriber)
   > ROS Serial communication with Host PC (Jetson Nano)
 by Aditya Kamath
 adityakamath.github.io
@@ -21,20 +22,21 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 ros::NodeHandle nh;
 std_msgs::Int8 mode_msg;
+std_msgs::Int8 loader_msg;
 
 void message_callback(const std_msgs::Int8& msg){
-    switch(msg data){
+    switch(msg.data){
         case 0: 
-            colorWipe(strip.Color(255, 255, 255), 10); //white
+            colorWipe(strip.Color(255, 255, 0), 10); //yellow
             break;
         case 1: 
             colorWipe(strip.Color(255, 0, 0), 10); //red
             break;
         case 2: 
-            colorWipe(strip.Color(255, 0, 0), 10); //red
+            colorWipe(strip.Color(0, 255, 0), 10); //green
             break;
         case 3: 
-            colorWipe(strip.Color(255, 0, 0), 10); //red
+            colorWipe(strip.Color(0, 0, 255), 10); //blue
             break;
         default:
             colorWipe(strip.Color(0, 0, 0), 10); //off
@@ -42,26 +44,49 @@ void message_callback(const std_msgs::Int8& msg){
     }
 }
 
+void loader_callback(const std_msgs::Int8& msg){
+    switch(msg.data){
+        case 1: 
+            colorWipe(strip.Color(255, 0, 0), 10); //red
+            break;
+        case 2: 
+            colorWipe(strip.Color(0, 255, 0), 10); //green
+            break;
+        case 0: 
+            colorWipe(strip.Color(0, 0, 0), 10); //off
+            break;     
+        default:
+            colorWipe(strip.Color(0, 0, 0), 10); //off
+            break;     
+    }
+}
+
+
 ros::Subscriber<std_msgs::Int8> mode_sub("/joy_node/mode", &message_callback);
+ros::Subscriber<std_msgs::Int8> loader_sub("/switch_node/loader", &loader_callback);
 
 void setup(){
 
    //setup neopixel strip
    strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
    strip.show();            // Turn OFF all pixels ASAP
-   strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
+   strip.setBrightness(55); // Set BRIGHTNESS to about 1/5 (max = 255)
 
    //car bootup sequence
    mode_msg.data = 0;
-   colorWipe(strip.Color(255, 255, 255), 10); //white
-   
+   loader_msg.data = 0;
+   colorWipe(strip.Color(127, 0, 255), 10); //purple
    nh.initNode();
    nh.subscribe(mode_sub);
+   nh.subscribe(loader_sub);
 }
 
-void loop(){     
-    nh.spinOnce();
-    delay(10);
+void loop(){
+  if(!nh.connected()){
+    colorWipe(strip.Color(127, 0, 255), 10); //purple
+  }
+  nh.spinOnce();
+  delay(10);
 }
 
 //wipe user specified color over all 8 LEDS

@@ -3,6 +3,7 @@
 Arduino Nano code for the Jetbot2
 This code implements the following functionality:
   > NeoPixel LED control to indicate ROSCar modes (subscriber)
+  > Drive servo motor (for loader attachment) from incoming commands (subscriber)
   > ROS Serial communication with Host PC (Jetson Nano)
 by Aditya Kamath
 adityakamath.github.io
@@ -13,14 +14,22 @@ github.com/adityakamath
 #include <ros.h>
 #include <std_msgs/Int8.h>
 #include <Adafruit_NeoPixel.h>
+#include <Servo.h>
 
 #define LED_PIN    6
 #define LED_COUNT  8
 #define LED_BRIGHTNESS 50
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
+#define LOADER_PIN 5
+#define RESOLUTION 1
+#define MAX_VAL    138
+Servo loader;
+int pos = 0;
+
 ros::NodeHandle nh;
 std_msgs::Int8 mode_msg;
+std_msgs::Int8 loader_msg;
 
 void message_callback(const std_msgs::Int8& msg){
     switch(msg.data){
@@ -42,7 +51,27 @@ void message_callback(const std_msgs::Int8& msg){
     }
 }
 
+void loader_callback(const std_msgs::Int8& msg){
+    switch(msg.data){
+        case 1: 
+            //move up
+            move_loader_up(0);
+            break;
+        case 2: 
+            //move down
+            move_loader_down(0);
+            break;
+        case 0: 
+            loader.write(pos);
+            break;     
+        default:
+            break;     
+    }
+}
+
+
 ros::Subscriber<std_msgs::Int8> mode_sub("/joy_node/mode", &message_callback);
+ros::Subscriber<std_msgs::Int8> loader_sub("/switch_node/loader", &loader_callback);
 
 void setup(){
 
@@ -51,11 +80,18 @@ void setup(){
    strip.show();            // Turn OFF all pixels ASAP
    strip.setBrightness(55); // Set BRIGHTNESS to about 1/5 (max = 255)
 
+   //setup loader servo
+   loader.attach(LOADER_PIN);
+   loader.write(0);
+
    //car bootup sequence
    mode_msg.data = 0;
+   loader_msg.data = 0;
    colorWipe(strip.Color(127, 0, 255), 10); //purple
+   
    nh.initNode();
    nh.subscribe(mode_sub);
+   nh.subscribe(loader_sub);
 }
 
 void loop(){
@@ -73,4 +109,32 @@ void colorWipe(uint32_t color, int wait) {
     strip.show();                          //  Update strip to match
     delay(wait);                           //  Pause for a moment
   }
+}
+
+void move_loader_up(int wait){
+  pos -= RESOLUTION;
+  
+  if(pos > MAX_VAL){
+    pos = MAX_VAL;
+  }
+  else if(pos < 0){
+    pos = 0;
+  }
+  
+  delay(wait);
+  loader.write(pos);
+}
+
+void move_loader_down(int wait){
+  pos += RESOLUTION;
+  
+  if(pos > MAX_VAL){
+    pos = MAX_VAL;
+  }
+  else if(pos < 0){
+    pos = 0;
+  }
+  
+  delay(wait);
+  loader.write(pos);
 }
