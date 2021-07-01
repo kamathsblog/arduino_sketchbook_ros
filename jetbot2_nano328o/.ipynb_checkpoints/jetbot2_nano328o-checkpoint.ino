@@ -3,7 +3,6 @@
 Arduino Nano code for the Jetbot2
 This code implements the following functionality:
   > NeoPixel LED control to indicate ROSCar modes (subscriber)
-  > Drive servo motor (for loader attachment) from incoming commands (subscriber)
   > ROS Serial communication with Host PC (Jetson Nano)
 by Aditya Kamath
 adityakamath.github.io
@@ -22,7 +21,6 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 ros::NodeHandle nh;
 std_msgs::Int8 mode_msg;
-std_msgs::Int8 loader_msg;
 
 void message_callback(const std_msgs::Int8& msg){
     switch(msg.data){
@@ -44,26 +42,7 @@ void message_callback(const std_msgs::Int8& msg){
     }
 }
 
-void loader_callback(const std_msgs::Int8& msg){
-    switch(msg.data){
-        case 1: 
-            colorWipe(strip.Color(255, 0, 0), 10); //red
-            break;
-        case 2: 
-            colorWipe(strip.Color(0, 255, 0), 10); //green
-            break;
-        case 0: 
-            colorWipe(strip.Color(0, 0, 0), 10); //off
-            break;     
-        default:
-            colorWipe(strip.Color(0, 0, 0), 10); //off
-            break;     
-    }
-}
-
-
 ros::Subscriber<std_msgs::Int8> mode_sub("/joy_node/mode", &message_callback);
-ros::Subscriber<std_msgs::Int8> loader_sub("/switch_node/loader", &loader_callback);
 
 void setup(){
 
@@ -76,9 +55,9 @@ void setup(){
    mode_msg.data = 0;
    loader_msg.data = 0;
    colorWipe(strip.Color(127, 0, 255), 10); //purple
+   
    nh.initNode();
    nh.subscribe(mode_sub);
-   nh.subscribe(loader_sub);
 }
 
 void loop(){

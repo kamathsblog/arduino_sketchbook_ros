@@ -5,8 +5,6 @@ Arduino sketches for the AKROS Differential (Jetbot2) and Ackermann (Jetracer2) 
 * jetbot2_nano328o
   * Sketch for the Arduino Nano 328 (old bootloader) on the Jetbot2
   * Subscribes to the 'mode' topic of Int8 type
-  * Subscribes to the 'loader' topic of Int8 type
-  * Controls the servo motor based on the up/down command
   * Controls Neopixel strip LED colors according to the selected mode
 * jetracer2_nano3280
   * Sketch for the Arduino Nano 328 (old bootloader) on the Jetbot2

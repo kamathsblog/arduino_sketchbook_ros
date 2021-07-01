@@ -3,7 +3,6 @@
 Arduino Nano code for the Jetbot2
 This code implements the following functionality:
   > NeoPixel LED control to indicate ROSCar modes (subscriber)
-  > Drive servo motor (for loader attachment) from incoming commands (subscriber)
   > ROS Serial communication with Host PC (Jetson Nano)
 by Aditya Kamath
 adityakamath.github.io
@@ -14,22 +13,14 @@ github.com/adityakamath
 #include <ros.h>
 #include <std_msgs/Int8.h>
 #include <Adafruit_NeoPixel.h>
-#include <Servo.h>
 
 #define LED_PIN    6
 #define LED_COUNT  8
 #define LED_BRIGHTNESS 50
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-#define LOADER_PIN 5
-#define MAX_VAL    138
-#define MIN_VAL    50
-Servo loader;
-int load_cmd = 0;
-
 ros::NodeHandle nh;
 std_msgs::Int8 mode_msg;
-std_msgs::Int8 loader_msg;
 
 void message_callback(const std_msgs::Int8& msg){
     switch(msg.data){
@@ -51,12 +42,7 @@ void message_callback(const std_msgs::Int8& msg){
     }
 }
 
-void loader_callback(const std_msgs::Int8& msg){
-    load_cmd = msg.data;
-}
-
 ros::Subscriber<std_msgs::Int8> mode_sub("/joy_node/mode", &message_callback);
-ros::Subscriber<std_msgs::Int8> loader_sub("/switch_node/loader", &loader_callback);
 
 void setup(){
 
@@ -65,10 +51,6 @@ void setup(){
    strip.show();            // Turn OFF all pixels ASAP
    strip.setBrightness(55); // Set BRIGHTNESS to about 1/5 (max = 255)
 
-   //setup loader servo
-   loader.attach(LOADER_PIN);
-   loader.write(0);
-
    //car bootup sequence
    mode_msg.data = 0;
    loader_msg.data = 0;
@@ -76,7 +58,6 @@ void setup(){
    
    nh.initNode();
    nh.subscribe(mode_sub);
-   nh.subscribe(loader_sub);
 }
 
 void loop(){
@@ -84,18 +65,6 @@ void loop(){
     colorWipe(strip.Color(127, 0, 255), 10); //purple
   }
   nh.spinOnce();
-  switch(load_cmd){
-      case 1: 
-          //move up
-          loader.write(MIN_VAL);
-          break;
-      case 2: 
-          //move down
-          loader.write(MAX_VAL);
-          break;
-      case 0: 
-          break;         
-  }
   delay(10);
 }
 
