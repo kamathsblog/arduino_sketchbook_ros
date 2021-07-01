@@ -53,7 +53,6 @@ void setup(){
 
    //car bootup sequence
    mode_msg.data = 0;
-   loader_msg.data = 0;
    colorWipe(strip.Color(127, 0, 255), 10); //purple
    
    nh.initNode();
