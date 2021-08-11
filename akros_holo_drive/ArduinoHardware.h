@@ -16,7 +16,7 @@ class ArduinoHardware
     ArduinoHardware()
     {
       iostream = &Serial1;
-      baud_ = 256000;
+      baud_ = 500000;
     }
   
     void setBaud(long baud)

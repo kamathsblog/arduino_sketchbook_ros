@@ -22,6 +22,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KH
 int enPins[4] = {8, 9, 10, 11};
 int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
 double vels[4] = {0, 0, 0, 0};
+geometry_msgs::Twist twist_msg;
 
 void holonomic_drive(double x, double y, double z){
   
@@ -42,10 +43,6 @@ void holonomic_drive(double x, double y, double z){
     }
   }
 
-  if(DEBUG){
-    colorWipe(strip.Color(abs(x*255), abs(y*255), abs(z*255)), 10); // x005fff
-  }
-
   for(int j=0; j<4; j++){
     if(vels[j] > 0 ){
       digitalWrite(inPins[(j+1)*2 - 2], HIGH);
@@ -60,6 +57,9 @@ void holonomic_drive(double x, double y, double z){
 }
 
 void drive_estop(){
+  twist_msg.linear.x = 0;
+  twist_msg.linear.y = 0;
+  twist_msg.angular.z = 0;
   for(int k=0; k<8; k++){
     digitalWrite(inPins[k], LOW);
   }
@@ -69,8 +69,7 @@ ros::NodeHandle nh;
 
 void twist_cb(const geometry_msgs::Twist& msg)
 {
-  holonomic_drive(msg.linear.x, msg.linear.y, msg.angular.z);
-  //delay(50);
+  twist_msg = msg;
 }
 
 ros::Subscriber<geometry_msgs::Twist> twist_sub("/cmd_vel", &twist_cb);
@@ -83,7 +82,6 @@ void setup() {
 
   pinMode(ESTOP_PIN, INPUT);
   drive_estop();
-  holonomic_drive(0, 0, 0);
   
   colorWipe(strip.Color(0, 255, 0), 10); // green
 
@@ -92,17 +90,22 @@ void setup() {
 }
 
 void loop() {
-  if(!digitalRead(ESTOP_PIN)){
-    colorWipe(strip.Color(127, 0, 255), 10); 
-    drive_estop();
-    holonomic_drive(0, 0, 0);
+  if(digitalRead(ESTOP_PIN)){
+    if(DEBUG){
+      colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 10);
+    }
+    else{
+      if(nh.connected()){
+        colorWipe(strip.Color(0, 127, 255), 10);
+      }
+    }
   }
   else{
-    if(!DEBUG && nh.connected()){
-    colorWipe(strip.Color(0, 127, 255), 10); 
-    }
-    nh.spinOnce();
+    drive_estop();
+    colorWipe(strip.Color(255, 0, 0), 10); 
   }
+  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
+  nh.spinOnce();
   delay(10);
 }
 
