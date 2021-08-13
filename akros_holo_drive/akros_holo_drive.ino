@@ -31,16 +31,19 @@ void holonomic_drive(double x, double y, double z){
 
   if(x!=0 || y!=0 || z!=0)
   {
-    vels[0] = V_MAX * (L_GAIN * r * cos(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //1:lf
-    vels[2] = V_MAX * (L_GAIN * r * cos(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //3:rb
-    vels[3] = V_MAX * (L_GAIN * r * sin(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //4:rf
-    vels[1] = V_MAX * (L_GAIN * r * sin(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //2:lb
+    if(digitalRead(ESTOP_PIN)){
+      vels[0] = V_MAX * (L_GAIN * r * cos(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //1:lf
+      vels[2] = V_MAX * (L_GAIN * r * cos(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //3:rb
+      vels[3] = V_MAX * (L_GAIN * r * sin(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //4:rf
+      vels[1] = V_MAX * (L_GAIN * r * sin(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //2:lb
+    }
+    else{
+      drive_estop();
+    }
   }
   else
   {
-    for(int i=0; i<4; i++){
-      vels[i] = 0;
-    }
+    drive_estop();
   }
 
   for(int j=0; j<4; j++){
@@ -57,9 +60,9 @@ void holonomic_drive(double x, double y, double z){
 }
 
 void drive_estop(){
-  twist_msg.linear.x = 0;
-  twist_msg.linear.y = 0;
-  twist_msg.angular.z = 0;
+  for(int i=0; i<4; i++){
+      vels[i] = 0;
+  }
   for(int k=0; k<8; k++){
     digitalWrite(inPins[k], LOW);
   }
@@ -82,6 +85,7 @@ void setup() {
 
   pinMode(ESTOP_PIN, INPUT);
   drive_estop();
+  holonomic_drive(0, 0, 0);
   
   colorWipe(strip.Color(0, 255, 0), 10); // green
 
@@ -93,7 +97,6 @@ void loop() {
   if(!digitalRead(ESTOP_PIN)){
     drive_estop();
     colorWipe(strip.Color(255, 0, 0), 10); 
-    holonomic_drive(0, 0, 0);
   }
   else{
     if(DEBUG){
@@ -104,8 +107,8 @@ void loop() {
         colorWipe(strip.Color(0, 127, 255), 10);
       }
     }
-    holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
   }
+  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
   nh.spinOnce();
 }
 
