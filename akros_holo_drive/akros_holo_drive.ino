@@ -90,7 +90,12 @@ void setup() {
 }
 
 void loop() {
-  if(digitalRead(ESTOP_PIN)){
+  if(!digitalRead(ESTOP_PIN)){
+    drive_estop();
+    colorWipe(strip.Color(255, 0, 0), 10); 
+    holonomic_drive(0, 0, 0);
+  }
+  else{
     if(DEBUG){
       colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 10);
     }
@@ -99,14 +104,9 @@ void loop() {
         colorWipe(strip.Color(0, 127, 255), 10);
       }
     }
+    holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
   }
-  else{
-    drive_estop();
-    colorWipe(strip.Color(255, 0, 0), 10); 
-  }
-  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
   nh.spinOnce();
-  delay(10);
 }
 
 void colorWipe(uint32_t c, uint8_t wait) 
