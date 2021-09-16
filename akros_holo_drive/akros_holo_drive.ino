@@ -18,6 +18,10 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KH
 #define A_GAIN 0.5
 #define ESTOP_PIN 53
 
+#define SCALE_X 0.35
+#define SCALE_Y 0.25
+#define SCALE_RZ 1.85
+
 //motors 1:lf, 2:lb, 3:rb, 4:rf
 int enPins[4] = {8, 9, 10, 11};
 int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
@@ -108,7 +112,7 @@ void loop() {
       }
     }
   }
-  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
+  holonomic_drive(twist_msg.linear.x/SCALE_X, twist_msg.linear.y/SCALE_Y, twist_msg.angular.z/SCALE_RZ);
   nh.spinOnce();
 }
 
