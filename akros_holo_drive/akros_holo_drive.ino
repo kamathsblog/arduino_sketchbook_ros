@@ -116,11 +116,11 @@ void setup() {
 }
 
 void loop() {
-  if(DEBUG){
-    colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 10);
-  }
-  else{
-    if(nh.connected()){
+  if(nh.connected()){
+    if(DEBUG){
+      colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 10);
+    }
+    else{
       colorWipe(strip.Color(0, 127, 255), 10);
     }
   }
