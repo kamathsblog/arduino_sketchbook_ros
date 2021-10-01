@@ -16,11 +16,11 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KH
 #define V_MAX 255
 #define L_GAIN 1
 #define A_GAIN 0.5
-#define ESTOP_PIN 53
 
 #define SCALE_X 0.35
 #define SCALE_Y 0.25
 #define SCALE_RZ 1.85
+#define SCALE 0.70
 
 //motors 1:lf, 2:lb, 3:rb, 4:rf
 int enPins[4] = {8, 9, 10, 11};
@@ -28,21 +28,41 @@ int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
 double vels[4] = {0, 0, 0, 0};
 geometry_msgs::Twist twist_msg;
 
+double check_limits(double x){
+  if(abs(x) < SCALE){
+    if(x < 0){
+      if(x > -1/2 * SCALE){ x = 0; }
+      else{ x = -1 * SCALE; }
+    }
+    else{
+      if(x != 0){
+        if(x < 1/2 * SCALE){ x = 0; }
+        else{ x = SCALE; }
+      }
+      else{
+        x = 0;
+      }
+    }
+  }
+  return x;
+}
+
 void holonomic_drive(double x, double y, double z){
   
   double theta = atan2(y, x);
   double r     = sqrt((pow(x, 2) + pow(y, 2)));
 
+  //x = check_limits(x);
+  //y = check_limits(y);
+  //z = check_limits(z);
+
   if(x!=0 || y!=0 || z!=0)
   {
-    if(digitalRead(ESTOP_PIN)){
+    {
       vels[0] = V_MAX * (L_GAIN * r * cos(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //1:lf
       vels[2] = V_MAX * (L_GAIN * r * cos(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //3:rb
       vels[3] = V_MAX * (L_GAIN * r * sin(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //4:rf
       vels[1] = V_MAX * (L_GAIN * r * sin(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //2:lb
-    }
-    else{
-      drive_estop();
     }
   }
   else
@@ -87,10 +107,8 @@ void setup() {
   strip.setBrightness(NEO_BRIGHTNESS);
   strip.show(); // Initialize all pixels to 'off'
 
-  pinMode(ESTOP_PIN, INPUT);
   drive_estop();
   holonomic_drive(0, 0, 0);
-  
   colorWipe(strip.Color(0, 255, 0), 10); // green
 
   nh.initNode();
@@ -98,20 +116,15 @@ void setup() {
 }
 
 void loop() {
-  if(!digitalRead(ESTOP_PIN)){
-    drive_estop();
-    colorWipe(strip.Color(255, 0, 0), 10); 
+  if(DEBUG){
+    colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 10);
   }
   else{
-    if(DEBUG){
-      colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 10);
-    }
-    else{
-      if(nh.connected()){
-        colorWipe(strip.Color(0, 127, 255), 10);
-      }
+    if(nh.connected()){
+      colorWipe(strip.Color(0, 127, 255), 10);
     }
   }
+  
   holonomic_drive(twist_msg.linear.x/SCALE_X, twist_msg.linear.y/SCALE_Y, twist_msg.angular.z/SCALE_RZ);
   nh.spinOnce();
 }
