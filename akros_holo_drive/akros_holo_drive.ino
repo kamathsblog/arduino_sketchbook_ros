@@ -6,11 +6,11 @@
   #include <avr/power.h>
 #endif
 
-#define DEBUG 0
+#define DEBUG 1
 
 #define NEO_PIN        52
 #define NEO_COUNT      6
-#define NEO_BRIGHTNESS 50
+#define NEO_BRIGHTNESS 30
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);
 
 #define V_MAX 255
