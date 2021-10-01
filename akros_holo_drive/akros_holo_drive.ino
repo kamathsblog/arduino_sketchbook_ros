@@ -10,7 +10,7 @@
 
 #define NEO_PIN        52
 #define NEO_COUNT      6
-#define NEO_BRIGHTNESS 30
+#define NEO_BRIGHTNESS 50
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);
 
 #define V_MAX 255
@@ -118,7 +118,7 @@ void setup() {
 void loop() {
   if(nh.connected()){
     if(DEBUG){
-      colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 10);
+      colorWipe(strip.Color(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)), 0);
     }
     else{
       colorWipe(strip.Color(0, 127, 255), 10);
