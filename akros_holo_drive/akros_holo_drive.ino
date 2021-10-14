@@ -6,7 +6,7 @@
   #include <avr/power.h>
 #endif
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define NEO_PIN        52
 #define NEO_COUNT      6
@@ -17,10 +17,10 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KH
 #define L_GAIN 1
 #define A_GAIN 0.5
 
-#define SCALE_X 0.35
-#define SCALE_Y 0.25
-#define SCALE_RZ 1.85
-#define SCALE 0.70
+#define MAX_X 0.35
+#define MAX_Y 0.25
+#define MAX_RZ 1.85
+#define MIN_PWM 50
 
 //motors 1:lf, 2:lb, 3:rb, 4:rf
 int enPins[4] = {8, 9, 10, 11};
@@ -28,33 +28,10 @@ int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
 double vels[4] = {0, 0, 0, 0};
 geometry_msgs::Twist twist_msg;
 
-double check_limits(double x){
-  if(abs(x) < SCALE){
-    if(x < 0){
-      if(x > -1/2 * SCALE){ x = 0; }
-      else{ x = -1 * SCALE; }
-    }
-    else{
-      if(x != 0){
-        if(x < 1/2 * SCALE){ x = 0; }
-        else{ x = SCALE; }
-      }
-      else{
-        x = 0;
-      }
-    }
-  }
-  return x;
-}
-
 void holonomic_drive(double x, double y, double z){
   
   double theta = atan2(y, x);
   double r     = sqrt((pow(x, 2) + pow(y, 2)));
-
-  //x = check_limits(x);
-  //y = check_limits(y);
-  //z = check_limits(z);
 
   if(x!=0 || y!=0 || z!=0)
   {
@@ -79,7 +56,14 @@ void holonomic_drive(double x, double y, double z){
       digitalWrite(inPins[(j+1)*2 - 2], LOW);
       digitalWrite(inPins[(j+1)*2 - 1], HIGH);
     }
-    analogWrite(enPins[j], abs((int)vels[j]));
+    int pwm;
+    if(abs((int)vels[j])!=0){
+      pwm = map(abs((int)vels[j]), 0, 255, MIN_PWM, 255);
+    }
+    else{
+      pwm = 0;
+    }
+    analogWrite(enPins[j], pwm);
   }
 }
 
@@ -125,7 +109,7 @@ void loop() {
     }
   }
   
-  holonomic_drive(twist_msg.linear.x/SCALE_X, twist_msg.linear.y/SCALE_Y, twist_msg.angular.z/SCALE_RZ);
+  holonomic_drive(twist_msg.linear.x/MAX_X, twist_msg.linear.y/MAX_Y, twist_msg.angular.z/MAX_RZ);
   nh.spinOnce();
 }
 
