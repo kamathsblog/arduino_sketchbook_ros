@@ -1,7 +1,9 @@
 #include <ros.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Point.h>
 #include <math.h>
 #include <FastLED.h>
+#include <Encoder.h>
 
 #define DEBUG 0
 
@@ -19,12 +21,17 @@ CRGB neopixel[NEO_COUNT];
 #define MAX_Y 0.25
 #define MAX_RZ 1.85
 #define MIN_PWM 50
+#define ENC_CPR 300
+#define WHEEL_DIAMETER 0.075 //m
 
 //motors 1:lf, 2:lb, 3:rb, 4:rf
+Encoder enc1(19, 17);
+Encoder enc2(18, 16);
+Encoder enc3(20, 25);
+Encoder enc4(21, 23);
 int enPins[4] = {8, 9, 10, 11};
 int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
 double vels[4] = {0, 0, 0, 0};
-geometry_msgs::Twist twist_msg;
 
 void holonomic_drive(double x, double y, double z){
   
@@ -75,13 +82,15 @@ void drive_estop(){
 }
 
 ros::NodeHandle nh;
+geometry_msgs::Twist twist_msg;
+ros::Subscriber<geometry_msgs::Twist> twist_sub("cmd_vel", &twist_cb);
+geometry_msgs::Point raw_vel_msg;
+ros::Publisher raw_vel_pub("raw_vel", &raw_vel_msg);
 
 void twist_cb(const geometry_msgs::Twist& msg)
 {
   twist_msg = msg;
 }
-
-ros::Subscriber<geometry_msgs::Twist> twist_sub("cmd_vel", &twist_cb);
 
 void setup() {
 
@@ -94,26 +103,38 @@ void setup() {
 
   nh.initNode();
   nh.subscribe(twist_sub);
+  nh.advertise(raw_vel_pub);
+
 }
 
 void loop() {
   
-  if(nh.connected()){
-    if(DEBUG){
-      colorWipe(setLEDColor(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255)));
-    }
-    else{
-      colorWipe(setLEDColor(0, 127, 255));
-    }
-  }
-  else{
-    nh.spinOnce();
-  }
+  int vel1, vel2, vel3, vel4;
+  vel1 = enc1.readRPM(ENC_CPR);
+  vel2 = enc2.readRPM(ENC_CPR);
+  vel3 = -1 * enc3.readRPM(ENC_CPR);
+  vel4 = -1 * enc4.readRPM(ENC_CPR);
 
-  FastLED.show();
-  nh.spinOnce();
+  float average_rps_x = ((vel1 + vel2 + vel3 + vel4)/4)/60.0;
+  raw_vel_msg.x = average_rps_x * PI * WHEEL_DIAMETER; // m/s
+
+  float average_rps_y = ((vel2 + vel4 - vel1 - vel3)/4)/60.0;
+  raw_vel_msg.y = average_rps_y * PI * WHEEL_DIAMETER; // m/s
+
+  float average_rps_a = ((vel3 + vel4 - vel1 - vel2)/4)/60.0;
+  raw_vel_msg.z = average_rps_a * PI * WHEEL_DIAMETER; // m/s
+
+  raw_vel_pub.publish(&raw_vel_msg);
   holonomic_drive(twist_msg.linear.x/MAX_X, twist_msg.linear.y/MAX_Y, twist_msg.angular.z/MAX_RZ);
-  delay(10);
+
+  if(nh.connected()){
+    if(DEBUG){ colorWipe(setLEDColor(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255))); }
+    else{ colorWipe(setLEDColor(0, 127, 255)); }
+  }
+  FastLED.show();
+  
+  nh.spinOnce();
+  delay(20);
 }
 
 CRGB setLEDColor(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata){
