@@ -30,8 +30,41 @@ Encoder enc4(21, 23);
 int enPins[4] = {8, 9, 10, 11};
 int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
 double vels[4] = {0, 0, 0, 0};
+double enc_vels[4] = {0, 0, 0, 0};
+unsigned long prev_update_time[4];
+long prev_encoder_ticks[4];
+
+geometry_msgs::Twist twist_msg;
+geometry_msgs::Point raw_vel_msg;
+
+int read_rpm(int encoder_number, long encoder_ticks, int counts_per_rev){
+  unsigned long current_time = millis();
+  unsigned long dt = current_time - prev_update_time[encoder_number];
+
+  double dt_min = (double)dt / 60000;
+  double delta_ticks = encoder_ticks - prev_encoder_ticks[encoder_number];
+
+  prev_update_time[encoder_number] = current_time;
+  prev_encoder_ticks[encoder_number] = encoder_ticks;
+
+  return (delta_ticks / counts_per_rev) / dt_min;
+}
 
 void holonomic_drive(double x, double y, double a){
+
+  enc_vels[0] = read_rpm(0, enc1.read(), ENC_CPR);  //1:lf
+  enc_vels[1] = read_rpm(1, enc2.read(), ENC_CPR);;  //2:lb
+  enc_vels[2] = -read_rpm(2, enc3.read(), ENC_CPR);; //3:rb - reversed polarity
+  enc_vels[3] = -read_rpm(3, enc4.read(), ENC_CPR);; //4:rf - reversed polarity
+
+  float avg_rpm_x = ((enc_vels[0] + enc_vels[1] + enc_vels[2] + enc_vels[3])/4);
+  raw_vel_msg.x = avg_rpm_x * PI * WHEEL_DIAMETER / 60; // m/s
+
+  float avg_rpm_y = ((enc_vels[1] + enc_vels[3] - enc_vels[0] - enc_vels[2])/4);
+  raw_vel_msg.y = avg_rpm_y * PI * WHEEL_DIAMETER / 60; // m/s
+
+  float avg_rpm_a = ((enc_vels[2] + enc_vels[3] - enc_vels[0] - enc_vels[1])/4);
+  raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
 
   float tangential = a * ((WHEELS_X_DISTANCE / 2) + (WHEELS_Y_DISTANCE / 2)); // m/s
 
@@ -40,6 +73,12 @@ void holonomic_drive(double x, double y, double a){
   float a_rpm = constrain(tangential * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
 
   /*
+  Serial.print("measured X: ");
+  Serial.println(raw_vel_msg.x);
+  Serial.print("measured Y: ");
+  Serial.println(raw_vel_msg.y);
+  Serial.print("measured A: ");
+  Serial.println(raw_vel_msg.z * ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60));
   Serial.print("Provided X: ");
   Serial.println(x_rpm);
   Serial.print("Provided Y: ");
@@ -90,9 +129,7 @@ void drive_estop(){
 }
 
 ros::NodeHandle nh;
-geometry_msgs::Twist twist_msg;
 ros::Subscriber<geometry_msgs::Twist> twist_sub("cmd_vel", &twist_cb);
-geometry_msgs::Point raw_vel_msg;
 ros::Publisher raw_vel_pub("raw_vel", &raw_vel_msg);
 
 void twist_cb(const geometry_msgs::Twist& msg){
@@ -114,41 +151,15 @@ void setup() {
 }
 
 void loop() {
-  double enc_vels[4] = {0, 0, 0, 0};
-
-  enc_vels[0] = enc1.readRPM(ENC_CPR);  //1:lf
-  enc_vels[1] = enc2.readRPM(ENC_CPR);  //2:lb
-  enc_vels[2] = -enc3.readRPM(ENC_CPR); //3:rb - reversed polarity
-  enc_vels[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
-
-  float avg_rpm_x = ((enc_vels[0] + enc_vels[1] + enc_vels[2] + enc_vels[3])/4);
-  raw_vel_msg.x = avg_rpm_x * PI * WHEEL_DIAMETER / 60; // m/s
-
-  float avg_rpm_y = ((enc_vels[1] + enc_vels[3] - enc_vels[0] - enc_vels[2])/4);
-  raw_vel_msg.y = avg_rpm_y * PI * WHEEL_DIAMETER / 60; // m/s
-
-  float avg_rpm_a = ((enc_vels[2] + enc_vels[3] - enc_vels[0] - enc_vels[1])/4);
-  raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
-
-  raw_vel_pub.publish(&raw_vel_msg);
-  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
-  
-  /*
-  holonomic_drive(0, 0, 0.5);
-  Serial.print("measured X: ");
-  Serial.println(raw_vel_msg.x);
-  Serial.print("measured Y: ");
-  Serial.println(raw_vel_msg.y);
-  Serial.print("measured A: ");
-  Serial.println(raw_vel_msg.z * ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60));
-  */
-
   if(nh.connected()){
     if(DEBUG){ colorWipe(setLEDColor(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255))); }
     else{ colorWipe(setLEDColor(0, 127, 255)); }
   }
   FastLED.show();
   
+  // holonomic_drive(0, 0, 0.5);
+  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
+  raw_vel_pub.publish(&raw_vel_msg);
   nh.spinOnce();
   delay(10);
 }
