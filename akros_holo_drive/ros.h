@@ -7,7 +7,7 @@
 namespace ros
 {
   // default is pubs: 25, sub: 25, in buf: 512, out buf: 512  
-  typedef NodeHandle_<ArduinoHardware, 4, 4, 280, 280> NodeHandle;
+  typedef NodeHandle_<ArduinoHardware, 2, 2, 150, 150> NodeHandle;
 
   // This is legal too and will use the default 25, 25, 512, 512
   //typedef NodeHandle_<ArduinoHardware> NodeHandle;
