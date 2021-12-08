@@ -37,7 +37,7 @@ long prev_encoder_ticks[4];
 geometry_msgs::Twist twist_msg;
 geometry_msgs::Point raw_vel_msg;
 
-int read_rpm(int encoder_number, long encoder_ticks, int counts_per_rev){
+double read_rpm(int encoder_number, long encoder_ticks, int counts_per_rev){
   unsigned long current_time = millis();
   unsigned long dt = current_time - prev_update_time[encoder_number];
 
@@ -147,7 +147,6 @@ void setup() {
   nh.initNode();
   nh.subscribe(twist_sub);
   nh.advertise(raw_vel_pub);
-
 }
 
 void loop() {
@@ -159,7 +158,9 @@ void loop() {
   
   // holonomic_drive(0, 0, 0.5);
   holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
+  delay(5);
   raw_vel_pub.publish(&raw_vel_msg);
+  delay(5);
   nh.spinOnce();
   delay(10);
 }
