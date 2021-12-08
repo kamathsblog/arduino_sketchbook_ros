@@ -1,116 +1,168 @@
 #include <ros.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Point.h>
 #include <math.h>
-#include <Adafruit_NeoPixel.h>
-#ifdef __AVR__
-  #include <avr/power.h>
-#endif
+#include <FastLED.h>
+#include <Encoder.h>
 
 #define DEBUG 0
 
 #define NEO_PIN        52
 #define NEO_COUNT      6
 #define NEO_BRIGHTNESS 50
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEO_COUNT, NEO_PIN, NEO_GRB + NEO_KHZ800);
 
-#define V_MAX 255
-#define L_GAIN 1
-#define A_GAIN 0.5
-#define ESTOP_PIN 53
+CRGB neopixel[NEO_COUNT];
+
+#define MIN_PWM 50
+#define MAX_PWM 255
+#define MAX_RPM 150
+#define MAX_RPM_GAIN 1.5
+#define ENC_CPR 300
+#define WHEEL_DIAMETER 0.075 //m
+#define WHEELS_X_DISTANCE 0.0925 //m
+#define WHEELS_Y_DISTANCE 0.225 //m
 
 //motors 1:lf, 2:lb, 3:rb, 4:rf
+Encoder enc1(19, 17);
+Encoder enc2(18, 16);
+Encoder enc3(20, 25);
+Encoder enc4(21, 23);
 int enPins[4] = {8, 9, 10, 11};
 int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
 double vels[4] = {0, 0, 0, 0};
 
-void holonomic_drive(double x, double y, double z){
-  
-  double theta = atan2(y, x);
-  double r     = sqrt((pow(x, 2) + pow(y, 2)));
+void holonomic_drive(double x, double y, double a){
 
-  if(x!=0 || y!=0 || z!=0)
-  {
-    vels[0] = V_MAX * (L_GAIN * r * cos(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //1:lf
-    vels[2] = V_MAX * (L_GAIN * r * cos(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //3:rb
-    vels[3] = V_MAX * (L_GAIN * r * sin(theta + PI/4) + A_GAIN * z) / (L_GAIN + A_GAIN); //4:rf
-    vels[1] = V_MAX * (L_GAIN * r * sin(theta + PI/4) - A_GAIN * z) / (L_GAIN + A_GAIN); //2:lb
-  }
-  else
-  {
-    for(int i=0; i<4; i++){
-      vels[i] = 0;
+  float tangential = a * ((WHEELS_X_DISTANCE / 2) + (WHEELS_Y_DISTANCE / 2)); // m/s
+
+  float x_rpm = constrain(x * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
+  float y_rpm = constrain(y * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
+  float a_rpm = constrain(tangential * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
+
+  /*
+  Serial.print("Provided X: ");
+  Serial.println(x_rpm);
+  Serial.print("Provided Y: ");
+  Serial.println(y_rpm);
+  Serial.print("Provided A: ");
+  Serial.println(a_rpm);
+  */
+
+  if(x!=0 || y!=0 || a!=0){
+    vels[0] = x_rpm - y_rpm - a_rpm; //1:lf
+    vels[1] = x_rpm + y_rpm - a_rpm; //2:lb
+    vels[2] = x_rpm - y_rpm + a_rpm; //3:rb
+    vels[3] = x_rpm + y_rpm + a_rpm; //4:rf
+
+    //instead of mapping it directly, use PID to determine RPM->PWM conversion, 
+    for(int j=0; j<4; j++){
+      if(vels[j] > 0 ){
+        digitalWrite(inPins[(j+1)*2 - 2], HIGH);
+        digitalWrite(inPins[(j+1)*2 - 1], LOW);
+      }
+      else{
+        digitalWrite(inPins[(j+1)*2 - 2], LOW);
+        digitalWrite(inPins[(j+1)*2 - 1], HIGH);
+      }
+      int pwm;
+      if(abs((int)vels[j])!=0){
+        pwm = map(abs((int)vels[j]), 0, MAX_RPM_GAIN*MAX_RPM, MIN_PWM, MAX_PWM);
+      }
+      else{
+        pwm = 0;
+      }
+      analogWrite(enPins[j], pwm);
     }
   }
-
-  if(DEBUG){
-    colorWipe(strip.Color(abs(x*255), abs(y*255), abs(z*255)), 10); // x005fff
-  }
-
-  for(int j=0; j<4; j++){
-    if(vels[j] > 0 ){
-      digitalWrite(inPins[(j+1)*2 - 2], HIGH);
-      digitalWrite(inPins[(j+1)*2 - 1], LOW);
-    }
-    else{
-      digitalWrite(inPins[(j+1)*2 - 2], LOW);
-      digitalWrite(inPins[(j+1)*2 - 1], HIGH);
-    }
-    analogWrite(enPins[j], abs((int)vels[j]));
+  else{
+    drive_estop();
   }
 }
 
 void drive_estop(){
+  for(int i=0; i<4; i++){
+      vels[i] = 0;
+  }
   for(int k=0; k<8; k++){
     digitalWrite(inPins[k], LOW);
+    digitalWrite(enPins[k], LOW);
   }
 }
 
 ros::NodeHandle nh;
+geometry_msgs::Twist twist_msg;
+ros::Subscriber<geometry_msgs::Twist> twist_sub("cmd_vel", &twist_cb);
+geometry_msgs::Point raw_vel_msg;
+ros::Publisher raw_vel_pub("raw_vel", &raw_vel_msg);
 
-void twist_cb(const geometry_msgs::Twist& msg)
-{
-  holonomic_drive(msg.linear.x, msg.linear.y, msg.angular.z);
-  //delay(50);
+void twist_cb(const geometry_msgs::Twist& msg){
+  twist_msg = msg;
 }
 
-ros::Subscriber<geometry_msgs::Twist> twist_sub("/cmd_vel", &twist_cb);
-
 void setup() {
+  FastLED.addLeds<NEOPIXEL, NEO_PIN>(neopixel, NEO_COUNT);
 
-  strip.begin();
-  strip.setBrightness(NEO_BRIGHTNESS);
-  strip.show(); // Initialize all pixels to 'off'
-
-  pinMode(ESTOP_PIN, INPUT);
   drive_estop();
   holonomic_drive(0, 0, 0);
-  
-  colorWipe(strip.Color(0, 255, 0), 10); // green
+  colorWipe(setLEDColor(0, 255, 0)); // green
+  FastLED.show();
 
   nh.initNode();
   nh.subscribe(twist_sub);
+  nh.advertise(raw_vel_pub);
+
 }
 
 void loop() {
-  if(!digitalRead(ESTOP_PIN)){
-    colorWipe(strip.Color(127, 0, 255), 10); 
-    drive_estop();
-    holonomic_drive(0, 0, 0);
+  double enc_vels[4] = {0, 0, 0, 0};
+
+  enc_vels[0] = enc1.readRPM(ENC_CPR);  //1:lf
+  enc_vels[1] = enc2.readRPM(ENC_CPR);  //2:lb
+  enc_vels[2] = -enc3.readRPM(ENC_CPR); //3:rb - reversed polarity
+  enc_vels[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
+
+  float avg_rpm_x = ((enc_vels[0] + enc_vels[1] + enc_vels[2] + enc_vels[3])/4);
+  raw_vel_msg.x = avg_rpm_x * PI * WHEEL_DIAMETER / 60; // m/s
+
+  float avg_rpm_y = ((enc_vels[1] + enc_vels[3] - enc_vels[0] - enc_vels[2])/4);
+  raw_vel_msg.y = avg_rpm_y * PI * WHEEL_DIAMETER / 60; // m/s
+
+  float avg_rpm_a = ((enc_vels[2] + enc_vels[3] - enc_vels[0] - enc_vels[1])/4);
+  raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
+
+  raw_vel_pub.publish(&raw_vel_msg);
+  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
+  
+  /*
+  holonomic_drive(0, 0, 0.5);
+  Serial.print("measured X: ");
+  Serial.println(raw_vel_msg.x);
+  Serial.print("measured Y: ");
+  Serial.println(raw_vel_msg.y);
+  Serial.print("measured A: ");
+  Serial.println(raw_vel_msg.z * ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60));
+  */
+
+  if(nh.connected()){
+    if(DEBUG){ colorWipe(setLEDColor(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255))); }
+    else{ colorWipe(setLEDColor(0, 127, 255)); }
   }
-  else{
-    if(!DEBUG && nh.connected()){
-    colorWipe(strip.Color(0, 127, 255), 10); 
-    }
-    nh.spinOnce();
-  }
+  FastLED.show();
+  
+  nh.spinOnce();
   delay(10);
 }
 
-void colorWipe(uint32_t c, uint8_t wait) 
-{
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-    strip.show();
-    delay(wait);
+CRGB setLEDColor(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata){
+    CRGB output(0, 0, 0);
+    output.r = Rdata;
+    output.g = Gdata;
+    output.b = Bdata;
+    return output;
+}
+
+void colorWipe(CRGB in_led){
+  for(int i=0; i<NEO_COUNT; i++) {
+    neopixel[i] = setLEDColor(in_led.r, in_led.g, in_led.b);
   }
 }
