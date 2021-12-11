@@ -1,0 +1,3 @@
+[submodule "Encoder"]
+	path = Encoder
+	url = https://github.com/adityakamath/Encoder

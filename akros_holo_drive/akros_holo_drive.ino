@@ -31,31 +31,16 @@ int enPins[4] = {8, 9, 10, 11};
 int inPins[8] = {32, 34, 36, 38, 42, 40, 46, 44};
 double vels[4] = {0, 0, 0, 0};
 double enc_vels[4] = {0, 0, 0, 0};
-unsigned long prev_update_time[4];
-long prev_encoder_ticks[4];
 
 geometry_msgs::Twist twist_msg;
 geometry_msgs::Point raw_vel_msg;
 
-double read_rpm(int encoder_number, long encoder_ticks, int counts_per_rev){
-  unsigned long current_time = millis();
-  unsigned long dt = current_time - prev_update_time[encoder_number];
-
-  double dt_min = (double)dt / 60000;
-  double delta_ticks = encoder_ticks - prev_encoder_ticks[encoder_number];
-
-  prev_update_time[encoder_number] = current_time;
-  prev_encoder_ticks[encoder_number] = encoder_ticks;
-
-  return (delta_ticks / counts_per_rev) / dt_min;
-}
-
 void holonomic_drive(double x, double y, double a){
 
-  enc_vels[0] = read_rpm(0, enc1.read(), ENC_CPR);  //1:lf
-  enc_vels[1] = read_rpm(1, enc2.read(), ENC_CPR);;  //2:lb
-  enc_vels[2] = -read_rpm(2, enc3.read(), ENC_CPR);; //3:rb - reversed polarity
-  enc_vels[3] = -read_rpm(3, enc4.read(), ENC_CPR);; //4:rf - reversed polarity
+  enc_vels[0] = enc1.readRPM(ENC_CPR);  //1:lf
+  enc_vels[1] = enc2.readRPM(ENC_CPR);  //2:lb
+  enc_vels[2] = -enc3.readRPM(ENC_CPR); //3:rb - reversed polarity
+  enc_vels[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
 
   float avg_rpm_x = ((enc_vels[0] + enc_vels[1] + enc_vels[2] + enc_vels[3])/4);
   raw_vel_msg.x = avg_rpm_x * PI * WHEEL_DIAMETER / 60; // m/s
