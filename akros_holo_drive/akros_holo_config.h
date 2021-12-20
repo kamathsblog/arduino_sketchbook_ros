@@ -17,7 +17,7 @@
 #define WHEELS_X_DISTANCE 0.0925 //m
 #define WHEELS_Y_DISTANCE 0.225 //m
 #define KP 0.65
-#define KI 0.25 
+#define KI 0.30 
 #define KD 0.50
 
 //MOTOR CONTROL WIRING
