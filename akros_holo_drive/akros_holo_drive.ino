@@ -1,13 +1,14 @@
 #include <ros.h>
-#include <geometry_msgs/Twist.h>
+#include <std_msgs/UInt32.h>
 #include <geometry_msgs/Point.h>
 #include <Encoder.h>
 #include <FastLED.h>
 #include "akros_holo_config.h"
 
 //Global variables and objects
-geometry_msgs::Twist twist_msg;
+geometry_msgs::Point twist_msg;
 geometry_msgs::Point raw_vel_msg;
+bool mode_msg[5] = {false, false, false, false, false};
 
 double rpm_ref[4]    = {0, 0, 0, 0};
 double rpm_meas[4]   = {0, 0, 0, 0};
@@ -35,19 +36,29 @@ CRGB setLEDColor(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata);
 void colorWipe(CRGB in_led);
 
 //Twist callback - stores latest received message in a global variable
-void twist_cb(const geometry_msgs::Twist& msg){
+void twist_cb(const geometry_msgs::Point& msg){
   twist_msg = msg;
+}
+
+//Mode callback - constructs mode message and stores in a global variable
+void mode_cb(const std_msgs::UInt32& msg){
+  std_msgs::UInt32 message = msg;
+  for(int i=0; i<5; i++){
+    mode_msg[i] = message.data%10 != 0 ? true:false;
+    message.data /= 10;
+  }
 }
 
 //ROS publishers and subscribers
 ros::NodeHandle nh;
-ros::Subscriber<geometry_msgs::Twist> twist_sub("cmd_vel", &twist_cb);
-ros::Publisher raw_vel_pub("raw_vel", &raw_vel_msg);
+ros::Subscriber<geometry_msgs::Point> twist_sub("cmd_vel/vector", &twist_cb);
+ros::Subscriber<std_msgs::UInt32> mode_sub("cmd_vel/mode", &mode_cb);
+ros::Publisher raw_vel_pub("raw_vec", &raw_vel_msg);
 
 void setup() {
   //Startup LEDs - green
   FastLED.addLeds<NEOPIXEL, NEO_PIN>(neopixel, NEO_COUNT);
-  colorWipe(setLEDColor(0, 255, 0)); // green
+  colorWipe(setLEDColor(0, MAX_PWM, 0)); // green
   FastLED.show();
   
   //Startup Drive - set all pins and pwms to 0
@@ -57,33 +68,67 @@ void setup() {
   //Startup ROS - initialize node, subscribe and advertise to topics
   nh.initNode();
   nh.subscribe(twist_sub);
+  nh.subscribe(mode_sub);
   nh.advertise(raw_vel_pub);
 
   //Connect to ROS
   while(!nh.connected()){ nh.spinOnce(); }
   
   //ROS connected
-  colorWipe(setLEDColor(0, 127, 255)); //blue
+  colorWipe(setLEDColor(0, MAX_PWM/2, MAX_PWM)); //blue
   FastLED.show();
-  delay(10);
 }
 
 void loop() {
-  //Loop LEDs - set to blue if ROS is connected once.
-  //If ROS gets disconnected, blue is retained
-  if(nh.connected()){
-    if(DEBUG){ colorWipe(setLEDColor(abs(twist_msg.linear.x*255), abs(twist_msg.linear.y*255), abs(twist_msg.angular.z*255))); }
-    else{ colorWipe(setLEDColor(0, 127, 255)); } // blue
+
+  if(mode_msg[ESTOP] == true){ // STOP! - red
+    drive_estop();
+    colorWipe(setLEDColor(255, 0, 0));
+    
+    holonomic_drive(0, 0, 0);  
   }
-  FastLED.show();
+  else{
+    if(mode_msg[AUTO_T] == true){ // AUTO
+      if(mode_msg[PLAY_WP] == true){ // AUTO > PLAYBACK WAYPOINTS - pink 0xe6007e
+        colorWipe(setLEDColor(230, 0, 126));
+      }
+      else if(mode_msg[PLAY_T] == true){ // AUTO > PLAYBACK TRAJECTORY - green 0x70ff00
+        colorWipe(setLEDColor(112, 255, 0));
+      }
+      else{ // AUTO > NORMAL -- blue 0x0070ff
+        colorWipe(setLEDColor(0, 112, 255)); 
+      }
+    }
+    else{ // TELEOP
+      if(mode_msg[RECORD] == true){ // TELEOP > RECORD - Orange Red #ff4500
+        colorWipe(setLEDColor(255, 69, 0));
+      }
+      else{ // TELEOP > NORMAL - rgb according to xyz or blueish-white #f5f5ff
+        if(DEBUG){colorWipe(setLEDColor(abs(twist_msg.x*MAX_PWM/SCALE_X), abs(twist_msg.y*MAX_PWM/SCALE_Y), abs(twist_msg.z*MAX_PWM/SCALE_RZ)));}
+        else{ 
+          colorWipe(setLEDColor(245, 245, 255)); 
+        }
+      }
+    }
+    
+    //Loop Drive - drive based on global twist message values
+    holonomic_drive(twist_msg.x, twist_msg.y, twist_msg.z);
+  }
   
-  //Loop Drive - drive based on global twist message values
-  holonomic_drive(twist_msg.linear.x, twist_msg.linear.y, twist_msg.angular.z);
+  FastLED.show();
       
-  //Loop Publisher - publish computed velocities from holonomic_drive
+  //Loop Publisher - compute velocities from holonomic_drive and publish
+  float avg_rpm_x = ((rpm_meas[0] + rpm_meas[1] + rpm_meas[2] + rpm_meas[3])/4);
+  float avg_rpm_y = ((rpm_meas[1] + rpm_meas[3] - rpm_meas[0] - rpm_meas[2])/4);
+  float avg_rpm_a = ((rpm_meas[2] + rpm_meas[3] - rpm_meas[0] - rpm_meas[1])/4);
+  
+  raw_vel_msg.x = avg_rpm_x * PI * WHEEL_DIAMETER / 60; // m/s
+  raw_vel_msg.y = avg_rpm_y * PI * WHEEL_DIAMETER / 60; // m/s
+  raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
+
   raw_vel_pub.publish(&raw_vel_msg);
       
-  //Spin ROS node once, loop at 100Hz frequency
+  //Spin ROS node once, loop at 50Hz frequency
   nh.spinOnce();
   delay(20);
 }
@@ -114,21 +159,12 @@ void spin_motor(int motor, double velocity){
   analogWrite(enPins[motor], map(abs((int)velocity), 0, MAX_PWM, MIN_PWM, MAX_PWM));   
 }
 
-
 //Using holonomic drive kinematics, drives individual motors based on input linear/angular velocities
 void holonomic_drive(double x, double y, double a){
   rpm_meas[0] = enc1.readRPM(ENC_CPR);  //1:lf
   rpm_meas[1] = enc2.readRPM(ENC_CPR);  //2:lb
   rpm_meas[2] = -enc3.readRPM(ENC_CPR); //3:rb - reversed polarity
   rpm_meas[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
-
-  float avg_rpm_x = ((rpm_meas[0] + rpm_meas[1] + rpm_meas[2] + rpm_meas[3])/4);
-  float avg_rpm_y = ((rpm_meas[1] + rpm_meas[3] - rpm_meas[0] - rpm_meas[2])/4);
-  float avg_rpm_a = ((rpm_meas[2] + rpm_meas[3] - rpm_meas[0] - rpm_meas[1])/4);
-  
-  raw_vel_msg.x = avg_rpm_x * PI * WHEEL_DIAMETER / 60; // m/s
-  raw_vel_msg.y = avg_rpm_y * PI * WHEEL_DIAMETER / 60; // m/s
-  raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
 
   float tangential = a * ((WHEELS_X_DISTANCE / 2) + (WHEELS_Y_DISTANCE / 2)); // m/s
   float x_rpm = constrain(x * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
@@ -153,7 +189,6 @@ void holonomic_drive(double x, double y, double a){
   }
 }
 
-
 //Hard stops all motors - sets direction pins, reference velocities, pwm_values to zero
 void drive_estop(){
   for(int i=0; i<4; i++){
@@ -164,7 +199,6 @@ void drive_estop(){
     digitalWrite(inPins[k], LOW);
   }
 }
-
 
 //Returns RGB values in CRGB format
 CRGB setLEDColor(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata){

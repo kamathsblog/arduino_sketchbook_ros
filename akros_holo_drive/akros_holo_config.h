@@ -7,18 +7,28 @@
 #define NEO_COUNT      6
 #define NEO_BRIGHTNESS 50
 
+//MODES
+#define ESTOP 0
+#define AUTO_T 1
+#define PLAY_WP 2
+#define PLAY_T 3
+#define RECORD 4
+
 //MOTOR CONTROL
 #define MIN_PWM 50
-#define MAX_PWM 255
+#define MAX_PWM 250
 #define MAX_RPM 150
 #define OPEN_LOOP_GAIN 1.5
 #define ENC_CPR 300
-#define WHEEL_DIAMETER 0.075 //m
-#define WHEELS_X_DISTANCE 0.0925 //m
-#define WHEELS_Y_DISTANCE 0.225 //m
+#define WHEEL_DIAMETER 0.077 //m
+#define WHEELS_X_DISTANCE 0.096 //m
+#define WHEELS_Y_DISTANCE 0.210 //m
 #define KP 0.65
 #define KI 0.30 
 #define KD 0.50
+#define SCALE_X 0.30
+#define SCALE_Y 0.25
+#define SCALE_RZ 1.57
 
 //MOTOR CONTROL WIRING
 //1:LF, 2:LB, 3:RB, 4:RF
