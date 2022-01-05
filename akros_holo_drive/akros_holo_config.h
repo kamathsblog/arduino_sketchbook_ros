@@ -23,8 +23,8 @@
 #define WHEEL_DIAMETER 0.077 //m
 #define WHEELS_X_DISTANCE 0.096 //m
 #define WHEELS_Y_DISTANCE 0.210 //m
-#define KP 0.65
-#define KI 0.30 
+#define KP 0.75
+#define KI 0.5 
 #define KD 0.50
 #define SCALE_X 0.30
 #define SCALE_Y 0.25

@@ -53,6 +53,7 @@ void loop() {
     Serial.print(" | Right Back = ");
     Serial.print(new3);
     Serial.println();
+    /*
     Serial.print("Velocity");
     Serial.print(" | Left Front = ");
     Serial.print(vel1);
@@ -63,6 +64,7 @@ void loop() {
     Serial.print(" | Right Back = ");
     Serial.print(vel3);
     Serial.println();
+    */
     position1 = new1;
     position2 = new2;
     position3 = new3;
