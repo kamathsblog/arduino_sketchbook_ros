@@ -128,9 +128,9 @@ void loop() {
 
   raw_vel_pub.publish(&raw_vel_msg);
       
-  //Spin ROS node once, loop at 50Hz frequency
+  //Spin ROS node once, loop at 40Hz frequency
   nh.spinOnce();
-  delay(20);
+  delay(25);
 }
 
 //PID Controller: Calculates output PWM for a motor using its reference and measured speeds
@@ -141,8 +141,7 @@ void pid(int motor, double reference, double measurement, double kp, double ki, 
   derivative[motor] += error - prev_error[motor];
   if(reference == 0 && error == 0){ integral[motor] = 0; } //reset integral
     
-  double pid_out = kp*error + ki*integral[motor] + kd*derivative[motor];
-  pwm_out[motor] = constrain(pid_out, -MAX_PWM, MAX_PWM);
+  pwm_out[motor] = kp*error + ki*integral[motor] + kd*derivative[motor];
   prev_error[motor] = error;
 }
 
@@ -156,7 +155,7 @@ void spin_motor(int motor, double velocity){
     digitalWrite(inPins[(motor+1)*2 - 2], LOW);
     digitalWrite(inPins[(motor+1)*2 - 1], HIGH);
   }  
-  analogWrite(enPins[motor], map(abs((int)velocity), 0, MAX_PWM, MIN_PWM, MAX_PWM));   
+  analogWrite(enPins[motor], constrain(abs((int)velocity), MIN_PWM, MAX_PWM));   
 }
 
 //Using holonomic drive kinematics, drives individual motors based on input linear/angular velocities
@@ -167,9 +166,9 @@ void holonomic_drive(double x, double y, double a){
   rpm_meas[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
 
   float tangential = a * ((WHEELS_X_DISTANCE / 2) + (WHEELS_Y_DISTANCE / 2)); // m/s
-  float x_rpm = constrain(x * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
-  float y_rpm = constrain(y * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
-  float a_rpm = constrain(tangential * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
+  float x_rpm = x * 60 / (PI * WHEEL_DIAMETER); // rotation per minute
+  float y_rpm = y * 60 / (PI * WHEEL_DIAMETER); // rotation per minute
+  float a_rpm = tangential * 60 / (PI * WHEEL_DIAMETER); // rotation per minute
 
   if(x!=0 || y!=0 || a!=0){
     rpm_ref[0] = x_rpm - y_rpm - a_rpm; //1:lf

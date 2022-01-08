@@ -16,16 +16,16 @@
 
 //MOTOR CONTROL
 #define MIN_PWM 50
-#define MAX_PWM 250
-#define MAX_RPM 150
-#define OPEN_LOOP_GAIN 1.5
+#define MAX_PWM 245
+#define OPEN_LOOP_GAIN 1.25
 #define ENC_CPR 300
-#define WHEEL_DIAMETER 0.077 //m
-#define WHEELS_X_DISTANCE 0.096 //m
+#define WHEEL_DIAMETER 0.075 //m
+#define WHEELS_X_DISTANCE 0.093 //m
 #define WHEELS_Y_DISTANCE 0.210 //m
-#define KP 0.75
-#define KI 0.5 
-#define KD 0.50
+#define KP 3.75
+#define KI 0.12
+#define KD 0.15
+
 #define SCALE_X 0.30
 #define SCALE_Y 0.25
 #define SCALE_RZ 1.57
