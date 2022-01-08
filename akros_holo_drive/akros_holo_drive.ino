@@ -61,9 +61,8 @@ void setup() {
   colorWipe(setLEDColor(0, MAX_PWM, 0)); // green
   FastLED.show();
   
-  //Startup Drive - set all pins and pwms to 0
+  //Startup Drive - set all pins to 0
   drive_estop();
-  holonomic_drive(0, 0, 0);
   
   //Startup ROS - initialize node, subscribe and advertise to topics
   nh.initNode();
@@ -85,7 +84,8 @@ void loop() {
     drive_estop();
     colorWipe(setLEDColor(255, 0, 0));
     
-    holonomic_drive(0, 0, 0);  
+    holonomic_drive(0, 0, 0);
+    nh.spinOnce();  
   }
   else{
     if(mode_msg[AUTO_T] == true){ // AUTO
@@ -113,6 +113,7 @@ void loop() {
     
     //Loop Drive - drive based on global twist message values
     holonomic_drive(twist_msg.x, twist_msg.y, twist_msg.z);
+    nh.spinOnce();
   }
   
   FastLED.show();
@@ -127,21 +128,21 @@ void loop() {
   raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
 
   raw_vel_pub.publish(&raw_vel_msg);
-      
-  //Spin ROS node once, loop at 40Hz frequency
   nh.spinOnce();
+      
+  //loop at 40Hz frequency
   delay(25);
 }
 
 //PID Controller: Calculates output PWM for a motor using its reference and measured speeds
 void pid(int motor, double reference, double measurement, double kp, double ki, double kd){
-  double error;
-  error = reference - measurement;
+  double error = reference - measurement;
   integral[motor] += error;
   derivative[motor] += error - prev_error[motor];
   if(reference == 0 && error == 0){ integral[motor] = 0; } //reset integral
-    
-  pwm_out[motor] = kp*error + ki*integral[motor] + kd*derivative[motor];
+
+  double pid_out = kp*error + ki*integral[motor] + kd*derivative[motor];
+  pwm_out[motor] = constrain(pid_out, -MAX_PWM, MAX_PWM);
   prev_error[motor] = error;
 }
 
@@ -154,8 +155,9 @@ void spin_motor(int motor, double velocity){
   else{
     digitalWrite(inPins[(motor+1)*2 - 2], LOW);
     digitalWrite(inPins[(motor+1)*2 - 1], HIGH);
-  }  
-  analogWrite(enPins[motor], constrain(abs((int)velocity), MIN_PWM, MAX_PWM));   
+  }
+  int motor_pwm = map(abs((int)velocity), 0, MAX_PWM, MIN_PWM, MAX_PWM);  
+  analogWrite(enPins[motor], motor_pwm);   
 }
 
 //Using holonomic drive kinematics, drives individual motors based on input linear/angular velocities
@@ -166,9 +168,9 @@ void holonomic_drive(double x, double y, double a){
   rpm_meas[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
 
   float tangential = a * ((WHEELS_X_DISTANCE / 2) + (WHEELS_Y_DISTANCE / 2)); // m/s
-  float x_rpm = x * 60 / (PI * WHEEL_DIAMETER); // rotation per minute
-  float y_rpm = y * 60 / (PI * WHEEL_DIAMETER); // rotation per minute
-  float a_rpm = tangential * 60 / (PI * WHEEL_DIAMETER); // rotation per minute
+  float x_rpm = constrain(x * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
+  float y_rpm = constrain(y * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
+  float a_rpm = constrain(tangential * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
 
   if(x!=0 || y!=0 || a!=0){
     rpm_ref[0] = x_rpm - y_rpm - a_rpm; //1:lf

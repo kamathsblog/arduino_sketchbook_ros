@@ -15,14 +15,15 @@
 #define RECORD 4
 
 //MOTOR CONTROL
-#define MIN_PWM 50
-#define MAX_PWM 245
+#define MIN_PWM 60
+#define MAX_PWM 240
+#define MAX_RPM 150
 #define OPEN_LOOP_GAIN 1.25
 #define ENC_CPR 300
 #define WHEEL_DIAMETER 0.075 //m
 #define WHEELS_X_DISTANCE 0.093 //m
 #define WHEELS_Y_DISTANCE 0.210 //m
-#define KP 3.75
+#define KP 3.00
 #define KI 0.12
 #define KD 0.15
 
