@@ -130,8 +130,8 @@ void loop() {
   raw_vel_pub.publish(&raw_vel_msg);
   nh.spinOnce();
       
-  //loop at 40Hz frequency
-  delay(25);
+  //loop at 50Hz frequency
+  delay(20);
 }
 
 //PID Controller: Calculates output PWM for a motor using its reference and measured speeds
@@ -139,7 +139,7 @@ void pid(int motor, double reference, double measurement, double kp, double ki, 
   double error = reference - measurement;
   integral[motor] += error;
   derivative[motor] += error - prev_error[motor];
-  if(reference == 0 && error == 0){ integral[motor] = 0; } //reset integral
+  if(reference == 0 && error == 0 || reference !=0 && measurement == 0){ integral[motor] = 0; } //reset integral
 
   double pid_out = kp*error + ki*integral[motor] + kd*derivative[motor];
   pwm_out[motor] = constrain(pid_out, -MAX_PWM, MAX_PWM);
@@ -156,16 +156,12 @@ void spin_motor(int motor, double velocity){
     digitalWrite(inPins[(motor+1)*2 - 2], LOW);
     digitalWrite(inPins[(motor+1)*2 - 1], HIGH);
   }
-  int motor_pwm = map(abs((int)velocity), 0, MAX_PWM, MIN_PWM, MAX_PWM);  
+  int motor_pwm = constrain(abs((int)velocity), MIN_PWM, MAX_PWM);  
   analogWrite(enPins[motor], motor_pwm);   
 }
 
 //Using holonomic drive kinematics, drives individual motors based on input linear/angular velocities
 void holonomic_drive(double x, double y, double a){
-  rpm_meas[0] = enc1.readRPM(ENC_CPR);  //1:lf
-  rpm_meas[1] = enc2.readRPM(ENC_CPR);  //2:lb
-  rpm_meas[2] = -enc3.readRPM(ENC_CPR); //3:rb - reversed polarity
-  rpm_meas[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
 
   float tangential = a * ((WHEELS_X_DISTANCE / 2) + (WHEELS_Y_DISTANCE / 2)); // m/s
   float x_rpm = constrain(x * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
@@ -188,6 +184,11 @@ void holonomic_drive(double x, double y, double a){
   else{
     drive_estop();
   }
+
+  rpm_meas[0] = enc1.readRPM(ENC_CPR);  //1:lf
+  rpm_meas[1] = enc2.readRPM(ENC_CPR);  //2:lb
+  rpm_meas[2] = -enc3.readRPM(ENC_CPR); //3:rb - reversed polarity
+  rpm_meas[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
 }
 
 //Hard stops all motors - sets direction pins, reference velocities, pwm_values to zero

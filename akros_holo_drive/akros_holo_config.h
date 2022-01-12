@@ -2,6 +2,11 @@
 #define DEBUG 0
 #define OPEN_LOOP 0
 
+//PID
+#define KP 0.75
+#define KI 0.50
+#define KD 0.50
+
 //NEOPIXEL
 #define NEO_PIN        52
 #define NEO_COUNT      6
@@ -16,16 +21,13 @@
 
 //MOTOR CONTROL
 #define MIN_PWM 60
-#define MAX_PWM 240
+#define MAX_PWM 250
 #define MAX_RPM 150
-#define OPEN_LOOP_GAIN 1.25
+#define OPEN_LOOP_GAIN 1.5
 #define ENC_CPR 300
 #define WHEEL_DIAMETER 0.075 //m
 #define WHEELS_X_DISTANCE 0.093 //m
 #define WHEELS_Y_DISTANCE 0.210 //m
-#define KP 3.00
-#define KI 0.12
-#define KD 0.15
 
 #define SCALE_X 0.30
 #define SCALE_Y 0.25
