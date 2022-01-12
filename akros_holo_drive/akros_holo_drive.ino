@@ -79,7 +79,6 @@ void setup() {
 }
 
 void loop() {
-
   if(mode_msg[ESTOP] == true){ // STOP! - red
     drive_estop();
     colorWipe(setLEDColor(255, 0, 0));
@@ -130,8 +129,8 @@ void loop() {
   raw_vel_pub.publish(&raw_vel_msg);
   nh.spinOnce();
       
-  //loop at 50Hz frequency
-  delay(20);
+  //loop at 100Hz frequency
+  delay(10);
 }
 
 //PID Controller: Calculates output PWM for a motor using its reference and measured speeds
@@ -139,7 +138,7 @@ void pid(int motor, double reference, double measurement, double kp, double ki, 
   double error = reference - measurement;
   integral[motor] += error;
   derivative[motor] += error - prev_error[motor];
-  if(reference == 0 && error == 0 || reference !=0 && measurement == 0){ integral[motor] = 0; } //reset integral
+  if(reference == 0 && error == 0){ integral[motor] = 0; } //reset integral
 
   double pid_out = kp*error + ki*integral[motor] + kd*derivative[motor];
   pwm_out[motor] = constrain(pid_out, -MAX_PWM, MAX_PWM);
