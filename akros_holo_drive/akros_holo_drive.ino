@@ -190,14 +190,11 @@ void holonomic_drive(double x, double y, double a){
   rpm_meas[3] = -enc4.readRPM(ENC_CPR); //4:rf - reversed polarity
 }
 
-//Hard stops all motors - sets direction pins, reference velocities, pwm_values to zero
+//Hard stops all motors - sets integral value, reference velocities, pwm_values to zero
 void drive_estop(){
   for(int i=0; i<4; i++){
       rpm_ref[i] = 0;
       digitalWrite(enPins[i], LOW);
-  }
-  for(int k=0; k<8; k++){
-    digitalWrite(inPins[k], LOW);
   }
 }
 
