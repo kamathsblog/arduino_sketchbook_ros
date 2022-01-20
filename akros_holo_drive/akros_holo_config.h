@@ -25,7 +25,7 @@
 #define MAX_RPM 150
 #define OPEN_LOOP_GAIN 1.5
 #define ENC_CPR 300
-#define WHEEL_DIAMETER 0.075 //m
+#define WHEEL_DIAMETER 0.08 //m
 #define WHEELS_X_DISTANCE 0.093 //m
 #define WHEELS_Y_DISTANCE 0.210 //m
 
