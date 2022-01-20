@@ -6,6 +6,7 @@
 #define KP 0.75
 #define KI 0.50
 #define KD 0.50
+#define UPDATE_RATE 20 //ms
 
 //NEOPIXEL
 #define NEO_PIN        52

@@ -129,8 +129,8 @@ void loop() {
   raw_vel_pub.publish(&raw_vel_msg);
   nh.spinOnce();
       
-  //loop at 100Hz frequency
-  delay(10);
+  //loop at 50Hz frequency
+  delay(20);
 }
 
 //PID Controller: Calculates output PWM for a motor using its reference and measured speeds
