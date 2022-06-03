@@ -1,7 +1,7 @@
 # Arduino ROS Sketchbook
 
 ### Description
-Arduino sketches for the AKROS Differential (Jetbot2) and Ackermann (Jetracer2) platforms. Both of the following use rosserial (assumed to be installed) to communicate with the ROS over serial.
+Arduino sketches for the NVidia Jetbot/Jetracer platforms. Both of the following use rosserial (assumed to be installed) to communicate with the ROS over serial.
 * jetbot2_nano328o
   * Sketch for the Arduino Nano 328 (old bootloader) on the Jetbot2
   * Subscribes to the 'mode' topic of Int8 type
