@@ -14,8 +14,8 @@
 //motors 1:lf, 2:lb, 3:rb, 4:rf
 Encoder enc1(19, 17);
 Encoder enc2(18, 16);
-Encoder enc3(20, 25);
-Encoder enc4(21, 23);
+Encoder enc3(20, 24);
+Encoder enc4(21, 22);
 //   avoid using pins with LEDs attached
 
 void setup() {
@@ -64,7 +64,7 @@ void loop() {
     Serial.print(" | Right Back = ");
     Serial.print(vel3);
     Serial.println();
-    */
+ */
     position1 = new1;
     position2 = new2;
     position3 = new3;
@@ -72,6 +72,7 @@ void loop() {
   }
   // if a character is sent from the serial monitor,
   // reset both back to zero.
+  /*
   if (Serial.available()) {
     Serial.read();
     Serial.println("Reset both knobs to zero");
@@ -80,6 +81,7 @@ void loop() {
     enc3.write(0);
     enc4.write(0);
   }
+  */
 
   delay(10);
 }
