@@ -21,9 +21,9 @@
 #define RECORD 4
 
 //MOTOR CONTROL
-#define MIN_PWM 60
-#define MAX_PWM 245
-#define MAX_RPM 150
+#define MIN_PWM 50
+#define MAX_PWM 200
+#define MAX_RPM 125
 #define OPEN_LOOP_GAIN 1.5
 #define ENC_CPR 296
 #define WHEEL_DIAMETER 0.0762 //m 3"
