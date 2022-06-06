@@ -1,9 +1,9 @@
+#include <Arduino.h>
 #include <ros.h>
 #include <std_msgs/UInt32.h>
 #include <geometry_msgs/Point.h>
 #include <Encoder.h>
 #include <FastLED.h>
-//#include <CytronMotorDriver.h>
 #include "akros_holo_teensy_config.h"
 
 //Global variables and objects
@@ -19,10 +19,6 @@ double integral[4]   = {0, 0, 0, 0};
 double derivative[4] = {0, 0, 0, 0};
 
 int inPins[8] = {M1_a, M1_b, M2_a, M2_b, M3_a, M3_b, M4_a, M4_b};
-// CytronMD motor1(M1_a, M1_b);
-// CytronMD motor2(M2_a, M2_b);
-// CytronMD motor3(M3_a, M3_b);
-// CytronMD motor4(M4_a, M4_b);
 
 Encoder enc1(E1_a, E1_b);
 Encoder enc2(E2_a, E2_b);
@@ -130,7 +126,6 @@ void loop()
         }
       }
     }
-
     //Loop Drive - drive based on global twist message values
     holonomic_drive(twist_msg.x, twist_msg.y, twist_msg.z);
     nh.spinOnce();
@@ -167,27 +162,10 @@ void pid(int motor, double reference, double measurement, double kp, double ki, 
   prev_error[motor] = error;
 }
 
-//Writes digital/PWM values to motor direction/enable pins for the specified motor
+//Writes PWM values to motor pins for the specified motor
 void spin_motor(int motor, double velocity)
 {
   int motor_pwm = constrain(abs((int)velocity), MIN_PWM, MAX_PWM);
-  // switch (motor)
-  // {
-  //   case 0:
-  //     motor1.setSpeed(motor_pwm);
-  //     break;
-  //   case 1:
-  //     motor2.setSpeed(motor_pwm);
-  //     break;
-  //   case 2:
-  //     motor3.setSpeed(motor_pwm);
-  //     break;
-  //   case 3:
-  //     motor4.setSpeed(motor_pwm);
-  //     break;
-  //   default:
-  //     break;
-  // }
   if(velocity >= 0)
   {
     analogWrite(inPins[2*motor], motor_pwm);
@@ -242,10 +220,6 @@ void drive_estop()
       analogWrite(inPins[2*i], 0);
       analogWrite(inPins[2*i+1], 0);
   }
-  // motor1.setSpeed(0);
-  // motor2.setSpeed(0);
-  // motor3.setSpeed(0);
-  // motor4.setSpeed(0);
 }
 
 //Returns RGB values in CRGB format
