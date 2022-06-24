@@ -163,19 +163,36 @@ void pid(int motor, double reference, double measurement, double kp, double ki, 
 }
 
 //Writes PWM values to motor pins for the specified motor
-void spin_motor(int motor, double velocity)
+void spin_motor(int motor, int pwm, bool direction)
 {
-  int motor_pwm = constrain(abs((int)velocity), MIN_PWM, MAX_PWM);
-  if(velocity >= 0)
+  if(direction == FORWARD)
   {
-    analogWrite(inPins[2*motor], motor_pwm);
+    analogWrite(inPins[2*motor], pwm);
     analogWrite(inPins[2*motor + 1], 0);
   }
-  else
+  else if(direction == BACKWARD)
   {
     analogWrite(inPins[2*motor], 0);
-    analogWrite(inPins[2*motor + 1], motor_pwm);
+    analogWrite(inPins[2*motor + 1], pwm);
   }
+}
+
+//Drives motor: If PWM is above a particular threshold, spins motor at half speed for specified time, then at full speed.
+void drive_motor_ramp(int motor, double velocity, int threshold)
+{
+  bool direction = FORWARD;
+  if(velocity < 0)
+  {
+    direction = BACKWARD;
+  }
+  int motor_pwm = constrain(abs((int)velocity), MIN_PWM, MAX_PWM);
+
+  if(motor_pwm > threshold*MAX_PWM/100)
+  {
+    spin_motor(motor, motor_pwm/2, direction);
+    delay(RAMP_DELAY);
+  }
+  spin_motor(motor, motor_pwm, direction);
 }
 
 //Using holonomic drive kinematics, drives individual motors based on input linear/angular velocities
@@ -197,7 +214,7 @@ void holonomic_drive(double x, double y, double a)
     {
       pid(j, rpm_ref[j], rpm_meas[j], KP, KI, KD);
       double motor_speed = OPEN_LOOP ? OPEN_LOOP_GAIN*rpm_ref[j] : pwm_out[j];
-      spin_motor(j, motor_speed);
+      drive_motor_ramp(j, motor_speed, RAMP_THRESHOLD);
     }
   }
   else

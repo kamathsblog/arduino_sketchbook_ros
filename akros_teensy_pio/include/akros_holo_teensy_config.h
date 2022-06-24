@@ -34,6 +34,11 @@
 #define SCALE_Y 0.25
 #define SCALE_RZ 1.57
 
+#define FORWARD true
+#define BACKWARD false
+#define RAMP_THRESHOLD 80 //percentage of MAX_PWM
+#define RAMP_DELAY 20 //delay in ms
+
 //MOTOR CONTROL WIRING
 //1:LF, 2:LB, 3:RB, 4:RF
 
