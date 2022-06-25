@@ -30,13 +30,13 @@
 #define WHEELS_X_DISTANCE 0.093 //m
 #define WHEELS_Y_DISTANCE 0.210 //m
 
-#define SCALE_X 0.30
-#define SCALE_Y 0.25
-#define SCALE_RZ 1.57
+#define SCALE_X 0.25
+#define SCALE_Y 0.175
+#define SCALE_RZ 1
 
 #define FORWARD true
 #define BACKWARD false
-#define RAMP_THRESHOLD 80 //percentage of MAX_PWM
+#define RAMP_THRESHOLD 75 //percentage of MAX_PWM
 #define RAMP_DELAY 20 //delay in ms
 
 //MOTOR CONTROL WIRING
