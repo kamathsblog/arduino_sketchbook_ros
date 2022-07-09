@@ -1,3 +1,17 @@
+/*
+==========
+Arduino Mega code for the AKROS robot
+This code implements the following functionality:
+  > NeoPixel LED control to indicate operating modes (subscriber)
+  > Drives the mecanum wheel robot with L298n motor drivers based on Twist values and the operating mode (subscriber)
+  > Measures wheel encoders and calculates the linear and angular velocities of the robot (publisher)
+  > ROSSerial communication with Host PC (Raspberry Pi 4 with ROS Noetic)
+Author: Aditya Kamath
+adityakamath.github.io
+github.com/adityakamath
+==========
+*/
+
 #include <ros.h>
 #include <std_msgs/UInt32.h>
 #include <geometry_msgs/Point.h>

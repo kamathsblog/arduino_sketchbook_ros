@@ -3,8 +3,8 @@
 Arduino Nano code for the Jetbot2
 This code implements the following functionality:
   > NeoPixel LED control to indicate ROSCar modes (subscriber)
-  > ROS Serial communication with Host PC (Jetson Nano)
-by Aditya Kamath
+  > ROSSerial communication with Host PC (Jetson Nano with ROS Melodic)
+Author: Aditya Kamath
 adityakamath.github.io
 github.com/adityakamath
 ==========
