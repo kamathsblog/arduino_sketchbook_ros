@@ -1,20 +1,9 @@
 # Arduino ROS Sketchbook
 
 ## Description
-All of the following projects use either rosserial or micro-ROS (assumed to be installed/configured) to communicate with ROS and ROS2 respectively. Tested with the following configurations:
+All of the following projects use either rosserial or micro-ROS (assumed to be installed/configured) to communicate with ROS and ROS2 respectively.
 
-* with a Jetson Nano and ROS1 Melodic (Ubuntu 18.04)
-* with a Raspberry Pi (32/64bit) and ROS2 Noetic (Ubuntu 20.04)
-* with a Raspberry Pi 4 8GB (64 bit) and ROS2 Galactic (Ubuntu 20.04)
-
-with the following platforms:
-
-* Arduino Nano 328 (ROSSerial)
-* Arduino Mega (ROSSerial)
-* Teensy 4.1 (ROSSerial)
-* Arduino Portenta H7 (micro-ROS)
-
-### Arduino sketches for the NVidia Jetbot/Jetracer platforms:  
+### Arduino sketches for the NVidia Jetbot/Jetracer platforms:
 The Jetracer includes an NVidia Jetson Nano, and a Raspberry Pi camera on top of an off the shelf RC car. The RC car is modified to include a hall effect sensor based encoder. The electronics of this robot were then moved to a Jetbot chassis, but without the hall effect sensor encoder but with support for Neopixel LEDs. So, there is a lot of common code.
 
 * jetbot2_nano328o
