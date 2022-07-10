@@ -31,40 +31,40 @@ unsigned long time_old;
 double time_elapsed, shaft_rpm, lin_speed;
 
 void setup(){
-   //Serial.begin(115200);
-   attachInterrupt(0, detect_magnet, RISING);//Initialize the interrupt pin (Arduino digital pin 2)
-   
-   ticks = 0;
-   time_old = 0;
-   time_elapsed = 0;
-   shaft_rpm = 0;
-   lin_speed = 0;
+  //Serial.begin(115200);
+  attachInterrupt(0, detect_magnet, RISING);//Initialize the interrupt pin (Arduino digital pin 2)
 
-   //setup neopixel strip
-   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
-   strip.show();            // Turn OFF all pixels ASAP
-   strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
+  ticks = 0;
+  time_old = 0;
+  time_elapsed = 0;
+  shaft_rpm = 0;
+  lin_speed = 0;
 
-   //car bootup sequence
-   colorWipe(strip.Color(255, 0, 0), 50); //red
-   delay(50*52); //enough time for the host PC to boot up
-   colorWipe(strip.Color(0, 255, 0), 50); //green
-   delay(50*52); //enough time for the host PC to launch services
-   colorWipe(strip.Color(0, 0, 255), 50); //blue
-   
-   nh.initNode();
-   nh.advertise(odom_pub);
+  //setup neopixel strip
+  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
+  strip.show();            // Turn OFF all pixels ASAP
+  strip.setBrightness(50); // Set BRIGHTNESS to about 1/5 (max = 255)
+
+  //car bootup sequence
+  colorWipe(strip.Color(255, 0, 0), 50); //red
+  delay(50*52); //enough time for the host PC to boot up
+  colorWipe(strip.Color(0, 255, 0), 50); //green
+  delay(50*52); //enough time for the host PC to launch services
+  colorWipe(strip.Color(0, 0, 255), 50); //blue
+
+  nh.initNode();
+  nh.advertise(odom_pub);
 }
 
 void loop(){
   //if(ticks >= TICKS_PER_ROTATION){ //update when 1 shaft rotation occurs
-      
+
       //calculate time since last shaft rotation
       time_elapsed = (millis() - time_old)/1000.00; //seconds
-      
+
       //calculate RPM using elapsed time and number of ticks since last shaft rotation
       shaft_rpm = (ticks*60.00) / (TICKS_PER_ROTATION*time_elapsed); //rotations per minute
-      
+
       //calculate linear speed using the TICKS_PER_10CM ratio
       lin_speed = ticks / (TICKS_PER_10CM*time_elapsed*10.00); //meters per second
 
@@ -76,14 +76,14 @@ void loop(){
       odom_msg.data = lin_speed;
       odom_pub.publish( &odom_msg );
       nh.spinOnce();
-      
+
       delay(1000); //update every 1 second
   //}
 }
- 
+
 //ISR to increment tick value every time a rising edge is sensed by the interrupt pin
 void detect_magnet(){
-   ticks++;
+  ticks++;
 }
 
 //wipe user specified color over all 8 LEDS

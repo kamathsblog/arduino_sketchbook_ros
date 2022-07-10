@@ -39,7 +39,7 @@
 
 //MOTOR/ENCODER 1: FRONT LEFT
 #define M1_en 9
-#define M1_a 37 
+#define M1_a 37
 #define M1_b 36
 #define E1_a 19
 #define E1_b 17

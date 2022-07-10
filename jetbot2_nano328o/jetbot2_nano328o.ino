@@ -24,21 +24,21 @@ std_msgs::Int8 mode_msg;
 
 void message_callback(const std_msgs::Int8& msg){
     switch(msg.data){
-        case 0: 
+        case 0:
             colorWipe(strip.Color(255, 255, 0), 10); //yellow
             break;
-        case 1: 
+        case 1:
             colorWipe(strip.Color(255, 0, 0), 10); //red
             break;
-        case 2: 
+        case 2:
             colorWipe(strip.Color(0, 255, 0), 10); //green
             break;
-        case 3: 
+        case 3:
             colorWipe(strip.Color(0, 0, 255), 10); //blue
             break;
         default:
             colorWipe(strip.Color(0, 0, 0), 10); //off
-            break;     
+            break;
     }
 }
 
@@ -46,17 +46,17 @@ ros::Subscriber<std_msgs::Int8> mode_sub("/joy_node/mode", &message_callback);
 
 void setup(){
 
-   //setup neopixel strip
-   strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
-   strip.show();            // Turn OFF all pixels ASAP
-   strip.setBrightness(55); // Set BRIGHTNESS to about 1/5 (max = 255)
+  //setup neopixel strip
+  strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
+  strip.show();            // Turn OFF all pixels ASAP
+  strip.setBrightness(55); // Set BRIGHTNESS to about 1/5 (max = 255)
 
-   //car bootup sequence
-   mode_msg.data = 0;
-   colorWipe(strip.Color(127, 0, 255), 10); //purple
-   
-   nh.initNode();
-   nh.subscribe(mode_sub);
+  //car bootup sequence
+  mode_msg.data = 0;
+  colorWipe(strip.Color(127, 0, 255), 10); //purple
+
+  nh.initNode();
+  nh.subscribe(mode_sub);
 }
 
 void loop(){

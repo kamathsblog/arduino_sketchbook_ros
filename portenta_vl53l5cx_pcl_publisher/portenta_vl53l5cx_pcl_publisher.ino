@@ -36,7 +36,7 @@ github.com/adityakamath
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
 
-#define ROS_DOMAIN_ID 0 //TODO: Agent also needs to have the same ID, done by custom QoS settings
+#define ROS_DOMAIN_ID 2
 #define PROCESSING    true //flag for the Processing App to visualize sensor readings
 #define HWSERIAL      Serial
 #define OFFSET        4
@@ -44,17 +44,17 @@ github.com/adityakamath
 #define RESOLUTION    8
 #define FOV           PI/2
 
-//micro-ROS entities
-rclc_support_t  support;
-rcl_node_t      node;
-rcl_publisher_t publisher;
-rcl_allocator_t allocator;
+//micro-ROS publisher entities
+rclc_support_t     support;
+rcl_node_t         node;
+rcl_publisher_t    publisher;
+rcl_allocator_t    allocator;
 sensor_msgs__msg__PointCloud2 msg;
 
 //VL53L5CX ToF sensor data
 SparkFun_VL53L5CX    myImager;
 VL53L5CX_ResultsData measurementData; //result data class structure, 1356 byes of RAM
-static int64_t time_ns;
+static int64_t       timestamp_ns;
 
 typedef union
 {
@@ -103,10 +103,14 @@ void setup()
   myImager.startRanging();
 
   //micro-ROS: define and configure allocator, init_options, node and publisher
-  allocator = rcl_get_default_allocator();
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));  
+  allocator    = rcl_get_default_allocator();
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+
+  RCCHECK(rcl_init_options_init(&init_options, allocator));
+  RCCHECK(rcl_init_options_set_domain_id(&init_options, (size_t)ROS_DOMAIN_ID));
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
   RCCHECK(rclc_node_init_default(&node, "micro_ros_vl53l5cx_node", "", &support));
-  
+
   RCCHECK(rclc_publisher_init_default(
     &publisher,
     &node,
@@ -128,7 +132,7 @@ void setup()
   msg.header.frame_id = micro_ros_string_utilities_set(msg.header.frame_id, "tof_frame");
   msg.height          = RESOLUTION;
   msg.width           = RESOLUTION;
-  
+
   msg.fields.size  = 3;
   msg.fields.data[0].name = micro_ros_string_utilities_set(msg.fields.data[0].name, "x");
   msg.fields.data[1].name = micro_ros_string_utilities_set(msg.fields.data[1].name, "y");
@@ -140,7 +144,7 @@ void setup()
     msg.fields.data[i].datatype = 7;
     msg.fields.data[i].count    = 1;
   }
-  
+
   msg.is_bigendian = false;
   msg.point_step   = NR_FIELDS * OFFSET;
   msg.row_step     = msg.point_step * msg.width;
@@ -152,9 +156,9 @@ void loop()
 {
   //synchronize time
   RCCHECK(rmw_uros_sync_session(1000));
-  time_ns = rmw_uros_epoch_nanos();
-  msg.header.stamp.sec = time_ns / 1000000000;
-  msg.header.stamp.nanosec = time_ns % 1000000000;
+  timestamp_ns = rmw_uros_epoch_nanos();
+  msg.header.stamp.sec = timestamp_ns / 1000000000;
+  msg.header.stamp.nanosec = timestamp_ns % 1000000000;
 
   //poll sensor for new data
   int data_count = 0;

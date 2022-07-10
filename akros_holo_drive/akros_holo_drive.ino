@@ -74,10 +74,10 @@ void setup() {
   FastLED.addLeds<NEOPIXEL, NEO_PIN>(neopixel, NEO_COUNT);
   colorWipe(setLEDColor(0, MAX_PWM, 0)); // green
   FastLED.show();
-  
+
   //Startup Drive - set all pins to 0
   drive_estop();
-  
+
   //Startup ROS - initialize node, subscribe and advertise to topics
   nh.initNode();
   nh.subscribe(twist_sub);
@@ -86,7 +86,7 @@ void setup() {
 
   //Connect to ROS
   while(!nh.connected()){ nh.spinOnce(); }
-  
+
   //ROS connected
   colorWipe(setLEDColor(0, MAX_PWM/2, MAX_PWM)); //blue
   FastLED.show();
@@ -96,9 +96,9 @@ void loop() {
   if(mode_msg[ESTOP] == true){ // STOP! - red
     drive_estop();
     colorWipe(setLEDColor(255, 0, 0));
-    
+
     holonomic_drive(0, 0, 0);
-    nh.spinOnce();  
+    nh.spinOnce();
   }
   else{
     if(mode_msg[AUTO_T] == true){ // AUTO
@@ -109,7 +109,7 @@ void loop() {
         colorWipe(setLEDColor(112, 255, 0));
       }
       else{ // AUTO > NORMAL -- blue 0x0070ff
-        colorWipe(setLEDColor(0, 112, 255)); 
+        colorWipe(setLEDColor(0, 112, 255));
       }
     }
     else{ // TELEOP
@@ -118,31 +118,31 @@ void loop() {
       }
       else{ // TELEOP > NORMAL - rgb according to xyz or blueish-white #f5f5ff
         if(DEBUG){colorWipe(setLEDColor(abs(twist_msg.x*MAX_PWM/SCALE_X), abs(twist_msg.y*MAX_PWM/SCALE_Y), abs(twist_msg.z*MAX_PWM/SCALE_RZ)));}
-        else{ 
-          colorWipe(setLEDColor(245, 245, 255)); 
+        else{
+          colorWipe(setLEDColor(245, 245, 255));
         }
       }
     }
-    
+
     //Loop Drive - drive based on global twist message values
     holonomic_drive(twist_msg.x, twist_msg.y, twist_msg.z);
     nh.spinOnce();
   }
-  
+
   FastLED.show();
-      
+
   //Loop Publisher - compute velocities from holonomic_drive and publish
   float avg_rpm_x = ((rpm_meas[0] + rpm_meas[1] + rpm_meas[2] + rpm_meas[3])/4);
   float avg_rpm_y = ((rpm_meas[1] + rpm_meas[3] - rpm_meas[0] - rpm_meas[2])/4);
   float avg_rpm_a = ((rpm_meas[2] + rpm_meas[3] - rpm_meas[0] - rpm_meas[1])/4);
-  
+
   raw_vel_msg.x = avg_rpm_x * PI * WHEEL_DIAMETER / 60; // m/s
   raw_vel_msg.y = avg_rpm_y * PI * WHEEL_DIAMETER / 60; // m/s
   raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
 
   raw_vel_pub.publish(&raw_vel_msg);
   nh.spinOnce();
-      
+
   //loop at 50Hz frequency
   delay(20);
 }
@@ -169,8 +169,8 @@ void spin_motor(int motor, double velocity){
     digitalWrite(inPins[2*motor], LOW);
     digitalWrite(inPins[2*motor + 1], HIGH);
   }
-  int motor_pwm = constrain(abs((int)velocity), MIN_PWM, MAX_PWM);  
-  analogWrite(enPins[motor], motor_pwm);   
+  int motor_pwm = constrain(abs((int)velocity), MIN_PWM, MAX_PWM);
+  analogWrite(enPins[motor], motor_pwm);
 }
 
 //Using holonomic drive kinematics, drives individual motors based on input linear/angular velocities
@@ -186,10 +186,9 @@ void holonomic_drive(double x, double y, double a){
     rpm_ref[1] = x_rpm + y_rpm - a_rpm; //2:lb
     rpm_ref[2] = x_rpm - y_rpm + a_rpm; //3:rb
     rpm_ref[3] = x_rpm + y_rpm + a_rpm; //4:rf
- 
+
     for(int j=0; j<4; j++){
       pid(j, rpm_ref[j], rpm_meas[j], KP, KI, KD);
-        
       double motor_speed = OPEN_LOOP ? OPEN_LOOP_GAIN*rpm_ref[j] : pwm_out[j];
       spin_motor(j, motor_speed);
     }
