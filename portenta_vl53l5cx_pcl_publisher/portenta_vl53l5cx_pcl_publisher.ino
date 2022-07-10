@@ -38,7 +38,7 @@ github.com/adityakamath
 
 #define ROS_DOMAIN_ID 2
 #define PROCESSING    true //flag for the Processing App to visualize sensor readings
-#define HWSERIAL      Serial
+#define HWSERIAL      Serial //change to Serial1 if using serial or wifi OR set the Processing flag to false
 #define OFFSET        4
 #define NR_FIELDS     3
 #define RESOLUTION    8
@@ -50,6 +50,7 @@ rcl_node_t         node;
 rcl_publisher_t    publisher;
 rcl_allocator_t    allocator;
 sensor_msgs__msg__PointCloud2 msg;
+bool uros_initialized = false;
 
 //VL53L5CX ToF sensor data
 SparkFun_VL53L5CX    myImager;
@@ -65,10 +66,25 @@ FLOAT2UINT8_T x, y, z;
 
 void error_loop()
 {
+  if(uros_initialized)
+  {
+    teardown_uros();
+  }
   while(1)
   {
     digitalWrite(LEDR, !digitalRead(LEDR));
     delay(100);
+  }
+}
+
+void teardown_uros()
+{
+  if(uros_initialized)
+  {
+    rcl_ret_t rc = rcl_publisher_fini(&publisher, &node);
+    rc += rcl_node_fini(&node);
+    rc += rclc_support_fini(&support);
+    if(rc == RCL_RET_OK){ uros_initialized = false; }
   }
 }
 
@@ -78,7 +94,7 @@ void setup()
   //set_microros_transports();
 
   //UDP (WIFI) TRANSPORT (currently does not work for this example)
-  //set_microros_wifi_transports("akwifi", "manipal2014", "192.168.0.107", 9999);
+  //set_microros_wifi_transports("akwifi", "manipal2014", "192.168.0.107", 7777);
 
   //UDP (ETHERNET) TRANSPORT
   byte arduino_mac[] = {0x01, 0xAB, 0x23, 0xCD, 0x45, 0xEF}; //user assigned MAC address
@@ -127,6 +143,8 @@ void setup()
   {
     error_loop();
   }
+
+  uros_initialized = true;
 
   //populate the static fields of the message
   msg.header.frame_id = micro_ros_string_utilities_set(msg.header.frame_id, "tof_frame");
