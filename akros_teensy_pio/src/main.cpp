@@ -42,12 +42,13 @@ Encoder enc4(E4_a, E4_b);
 CRGB neopixel[NEO_COUNT];
 
 //Function prototypes
+void bootupLEDsequence(int max_steps, int step);
 void pid(int motor, double reference, double measurement, double kp, double ki, double kd);
-void spin_motor(int motor, double velocity);
-void holonomic_drive(double x, double y, double a);
-void drive_estop();
-CRGB setLEDColor(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata);
-void colorWipe(CRGB in_led);
+void spinMotor(int motor, double velocity);
+void holoDrive(double x, double y, double a);
+void eStop();
+CRGB toCRGB(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata);
+void setNeopixel(CRGB in_led);
 
 //Twist callback - stores latest received message in a global variable
 void twist_cb(const geometry_msgs::Point& msg){
@@ -73,81 +74,59 @@ void setup()
 {
   //Startup LEDs - green
   FastLED.addLeds<NEOPIXEL, NEO_PIN>(neopixel, NEO_COUNT);
-  colorWipe(setLEDColor(0, MAX_PWM, 0)); // green
-  FastLED.show();
+  bootupLEDsequence(5, 1);
 
   //Startup Drive - set all pins to 0
-  drive_estop();
+  eStop();
+  bootupLEDsequence(5, 2);
 
   //Startup ROS - initialize node, subscribe and advertise to topics
   nh.initNode();
   nh.subscribe(twist_sub);
   nh.subscribe(mode_sub);
   nh.advertise(raw_vel_pub);
+  bootupLEDsequence(5, 3);
 
   //Connect to ROS
   while(!nh.connected())
   {
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    bootupLEDsequence(5, 4);
     nh.spinOnce();
   }
 
   //ROS connected
-  colorWipe(setLEDColor(0, MAX_PWM/2, MAX_PWM)); //blue
-  FastLED.show();
+  bootupLEDsequence(5, 5);
 }
 
 void loop()
 {
-  if(mode_msg[ESTOP] == true)
-  { // STOP! - red
-    drive_estop();
-    colorWipe(setLEDColor(255, 0, 0));
 
-    holonomic_drive(0, 0, 0);
+  if(mode_msg[ESTOP] == true){ // STOP! - red
+    eStop();
+    setNeopixel(toCRGB(255, 0, 0));
+
+    holoDrive(0, 0, 0);
     nh.spinOnce();
   }
   else{
-    if(mode_msg[AUTO_T] == true)
-    { // AUTO
-      if(mode_msg[PLAY_WP] == true)
-      { // AUTO > PLAYBACK WAYPOINTS - pink 0xe6007e
-        colorWipe(setLEDColor(230, 0, 126));
-      }
-      else if(mode_msg[PLAY_T] == true)
-      { // AUTO > PLAYBACK TRAJECTORY - green 0x70ff00
-        colorWipe(setLEDColor(112, 255, 0));
-      }
-      else
-      { // AUTO > NORMAL -- blue 0x0070ff
-        colorWipe(setLEDColor(0, 112, 255));
-      }
+    if(mode_msg[AUTO_T] == true){ // AUTO
+      setNeopixel(toCRGB(0, 75, 255));
     }
-    else
-    { // TELEOP
-      if(mode_msg[RECORD] == true)
-      { // TELEOP > RECORD - Orange Red #ff4500
-        colorWipe(setLEDColor(255, 69, 0));
+    else{ // TELEOP
+      if(DEBUG){
+        (toCRGB(abs(twist_msg.x*MAX_PWM/SCALE_X), abs(twist_msg.y*MAX_PWM/SCALE_Y), abs(twist_msg.z*MAX_PWM/SCALE_RZ)));
       }
-      else
-      { // TELEOP > NORMAL - rgb according to xyz or blueish-white #f5f5ff
-        if(DEBUG)
-        {
-          (setLEDColor(abs(twist_msg.x*MAX_PWM/SCALE_X), abs(twist_msg.y*MAX_PWM/SCALE_Y), abs(twist_msg.z*MAX_PWM/SCALE_RZ)));
-        }
-        else
-        {
-          colorWipe(setLEDColor(245, 245, 255));
-        }
+      else{
+        setNeopixel(toCRGB(0, 255, 75));
       }
     }
     //Loop Drive - drive based on global twist message values
-    holonomic_drive(twist_msg.x, twist_msg.y, twist_msg.z);
+    holoDrive(twist_msg.x, twist_msg.y, twist_msg.z);
     nh.spinOnce();
   }
 
-  FastLED.show();
-
-  //Loop Publisher - compute velocities from holonomic_drive and publish
+  //Loop Publisher - compute velocities from holoDrive and publish
   float avg_rpm_x = ((rpm_meas[0] + rpm_meas[1] + rpm_meas[2] + rpm_meas[3])/4);
   float avg_rpm_y = ((rpm_meas[1] + rpm_meas[3] - rpm_meas[0] - rpm_meas[2])/4);
   float avg_rpm_a = ((rpm_meas[2] + rpm_meas[3] - rpm_meas[0] - rpm_meas[1])/4);
@@ -157,10 +136,20 @@ void loop()
   raw_vel_msg.z = avg_rpm_a * PI * WHEEL_DIAMETER / ((WHEELS_X_DISTANCE/2 + WHEELS_Y_DISTANCE/2)*60); // rad/s
 
   raw_vel_pub.publish(&raw_vel_msg);
+
+  FastLED.show();
   nh.spinOnce();
 
   //loop at 50Hz frequency
   delay(20);
+}
+
+//Sets LED color wipe according to number of boot steps, and the current step provided by user
+void bootupLEDsequence(int max_steps, int step)
+{
+  setNeopixel(toCRGB(0, MAX_PWM*step/max_steps, MAX_PWM*step/(2.5*max_steps)));
+  FastLED.show();
+  delay(100);
 }
 
 //PID Controller: Calculates output PWM for a motor using its reference and measured speeds
@@ -177,7 +166,7 @@ void pid(int motor, double reference, double measurement, double kp, double ki, 
 }
 
 //Writes PWM values to motor pins for the specified motor
-void spin_motor(int motor, int pwm, bool direction)
+void spinMotor(int motor, int pwm, bool direction)
 {
   if(direction == FORWARD)
   {
@@ -203,14 +192,14 @@ void drive_motor_ramp(int motor, double velocity, int threshold)
 
   if(motor_pwm > threshold*MAX_PWM/100)
   {
-    spin_motor(motor, motor_pwm/2, direction);
+    spinMotor(motor, motor_pwm/2, direction);
     delay(RAMP_DELAY);
   }
-  spin_motor(motor, motor_pwm, direction);
+  spinMotor(motor, motor_pwm, direction);
 }
 
 //Using holonomic drive kinematics, drives individual motors based on input linear/angular velocities
-void holonomic_drive(double x, double y, double a)
+void holoDrive(double x, double y, double a)
 {
   float tangential = a * ((WHEELS_X_DISTANCE / 2) + (WHEELS_Y_DISTANCE / 2)); // m/s
   float x_rpm = constrain(x * 60 / (PI * WHEEL_DIAMETER), -MAX_RPM, MAX_RPM); // rotation per minute
@@ -233,7 +222,7 @@ void holonomic_drive(double x, double y, double a)
   }
   else
   {
-    drive_estop();
+    eStop();
   }
 
   rpm_meas[0] = enc1.readRPM(ENC_CPR);  //1:lf
@@ -243,7 +232,7 @@ void holonomic_drive(double x, double y, double a)
 }
 
 //Hard stops all motors - reference velocities, motor pins to zero
-void drive_estop()
+void eStop()
 {
   for(int i=0; i<4; i++)
   {
@@ -254,7 +243,7 @@ void drive_estop()
 }
 
 //Returns RGB values in CRGB format
-CRGB setLEDColor(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata)
+CRGB toCRGB(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata)
 {
     CRGB output(0, 0, 0);
     output.r = Rdata;
@@ -264,10 +253,10 @@ CRGB setLEDColor(uint8_t Rdata, uint8_t Gdata, uint8_t Bdata)
 }
 
 //Sets all LEDs to CRGB color in sequence
-void colorWipe(CRGB in_led)
+void setNeopixel(CRGB in_led)
 {
   for(int i=0; i<NEO_COUNT; i++)
   {
-    neopixel[i] = setLEDColor(in_led.r, in_led.g, in_led.b);
+    neopixel[i] = toCRGB(in_led.r, in_led.g, in_led.b);
   }
 }

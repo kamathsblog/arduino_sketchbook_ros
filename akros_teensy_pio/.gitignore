@@ -6,3 +6,4 @@
 log/*
 libdeps
 build
+.vscode/*

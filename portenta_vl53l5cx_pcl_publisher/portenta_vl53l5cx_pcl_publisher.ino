@@ -10,7 +10,7 @@ github.com/adityakamath
 ==========
 */
 
-//micro-ROS includes from micro_ros_arduino v2.0.5-galactic (https://github.com/micro-ROS/micro_ros_arduino)
+//micro-ROS includes from micro_ros_arduino (branch: galactic) (https://github.com/micro-ROS/micro_ros_arduino)
 #include <micro_ros_arduino.h>
 #include <micro_ros_utilities/string_utilities.h>
 #include <micro_ros_utilities/type_utilities.h>
