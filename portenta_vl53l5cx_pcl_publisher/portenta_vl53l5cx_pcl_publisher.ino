@@ -28,7 +28,6 @@ github.com/adityakamath
 #include <TimeLib.h>
 #include <Wire.h>
 
-//defines
 #if !defined(TARGET_PORTENTA_H7_M7)
 #error This example is only avaible for Arduino Portenta H7 (M7 Core)
 #endif
@@ -43,6 +42,7 @@ github.com/adityakamath
 #define NR_FIELDS     3
 #define RESOLUTION    8
 #define FOV           PI/2
+#define LED_PIN       LEDR
 
 //micro-ROS publisher entities
 rclc_support_t     support;
@@ -64,6 +64,8 @@ typedef union
 } FLOAT2UINT8_T;
 FLOAT2UINT8_T x, y, z;
 
+unsigned long long time_offset = 0;
+
 void error_loop()
 {
   if(uros_initialized)
@@ -72,7 +74,7 @@ void error_loop()
   }
   while(1)
   {
-    digitalWrite(LEDR, !digitalRead(LEDR));
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
     delay(100);
   }
 }
@@ -90,20 +92,13 @@ void teardown_uros()
 
 void setup()
 {
-  //SERIAL TRANSPORT (currently does not work for this example)
-  //set_microros_transports();
-
-  //UDP (WIFI) TRANSPORT (currently does not work for this example)
-  //set_microros_wifi_transports("akwifi", "manipal2014", "192.168.0.107", 7777);
-
-  //UDP (ETHERNET) TRANSPORT
   byte arduino_mac[] = {0x01, 0xAB, 0x23, 0xCD, 0x45, 0xEF}; //user assigned MAC address
   IPAddress arduino_ip(192, 168, 1, 109);                    //user assigned IP address
   IPAddress agent_ip(192, 168, 1, 100);                      //static IP defined on the ROS2 agent side
   set_microros_native_ethernet_udp_transports(arduino_mac, arduino_ip, agent_ip, 8888);
 
   bootM4(); //boot M4 core for dual core processing
-  digitalWrite(LEDR, LOW);
+  digitalWrite(LED_PIN, LOW);
   delay(2000);
 
   //initialize I2C and serial communication
@@ -168,15 +163,17 @@ void setup()
   msg.row_step     = msg.point_step * msg.width;
   msg.data.size    = msg.row_step * msg.height;
   msg.is_dense     = false;
+
+  //synchronize time
+  RCCHECK(rmw_uros_sync_session(1000));
+  calculateOffset();
 }
 
 void loop()
 {
-  //synchronize time
-  RCCHECK(rmw_uros_sync_session(1000));
-  timestamp_ns = rmw_uros_epoch_nanos();
-  msg.header.stamp.sec = timestamp_ns / 1000000000;
-  msg.header.stamp.nanosec = timestamp_ns % 1000000000;
+  struct timespec time_stamp = getTime();
+  msg.header.stamp.sec = time_stamp.tv_sec;
+  msg.header.stamp.nanosec = time_stamp.tv_nsec;
 
   //poll sensor for new data
   int data_count = 0;
@@ -217,4 +214,23 @@ void loop()
   }
   RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
   delay(20);
+}
+
+void calculateOffset()
+{
+  unsigned long now = millis();
+  unsigned long long ros_time_ms = rmw_uros_epoch_millis();
+  time_offset = ros_time_ms - now;
+}
+
+struct timespec getTime()
+{
+  struct timespec tp = {0};
+  // add time difference between uC time and ROS time to
+  // synchronize time with ROS
+  unsigned long long now = millis() + time_offset;
+  tp.tv_sec = now / 1000;
+  tp.tv_nsec = (now % 1000) * 1000000;
+
+  return tp;
 }
