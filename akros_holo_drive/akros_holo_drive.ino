@@ -57,7 +57,7 @@ void twist_cb(const geometry_msgs::Point& msg){
 //Mode callback - constructs mode message and stores in a global variable
 void mode_cb(const std_msgs::UInt32& msg){
   std_msgs::UInt32 message = msg;
-  for(int i=0; i<5; i++){
+  for(int i=0; i<2; i++){
     mode_msg[i] = message.data%10 != 0 ? true:false;
     message.data /= 10;
   }
@@ -102,25 +102,14 @@ void loop() {
   }
   else{
     if(mode_msg[AUTO_T] == true){ // AUTO
-      if(mode_msg[PLAY_WP] == true){ // AUTO > PLAYBACK WAYPOINTS - pink 0xe6007e
-        colorWipe(setLEDColor(230, 0, 126));
-      }
-      else if(mode_msg[PLAY_T] == true){ // AUTO > PLAYBACK TRAJECTORY - green 0x70ff00
-        colorWipe(setLEDColor(112, 255, 0));
-      }
-      else{ // AUTO > NORMAL -- blue 0x0070ff
-        colorWipe(setLEDColor(0, 112, 255));
-      }
+      // AUTO > NORMAL -- blue 0x0070ff
+      colorWipe(setLEDColor(0, 112, 255));
     }
     else{ // TELEOP
-      if(mode_msg[RECORD] == true){ // TELEOP > RECORD - Orange Red #ff4500
-        colorWipe(setLEDColor(255, 69, 0));
-      }
-      else{ // TELEOP > NORMAL - rgb according to xyz or blueish-white #f5f5ff
-        if(DEBUG){colorWipe(setLEDColor(abs(twist_msg.x*MAX_PWM/SCALE_X), abs(twist_msg.y*MAX_PWM/SCALE_Y), abs(twist_msg.z*MAX_PWM/SCALE_RZ)));}
-        else{
-          colorWipe(setLEDColor(245, 245, 255));
-        }
+      // TELEOP > NORMAL - rgb according to xyz or blueish-white #f5f5ff
+      if(DEBUG){colorWipe(setLEDColor(abs(twist_msg.x*MAX_PWM/SCALE_X), abs(twist_msg.y*MAX_PWM/SCALE_Y), abs(twist_msg.z*MAX_PWM/SCALE_RZ)));}
+      else{
+        colorWipe(setLEDColor(245, 245, 255));
       }
     }
 

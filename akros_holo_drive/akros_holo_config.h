@@ -16,9 +16,6 @@
 //MODES
 #define ESTOP 0
 #define AUTO_T 1
-#define PLAY_WP 2
-#define PLAY_T 3
-#define RECORD 4
 
 //MOTOR CONTROL
 #define MIN_PWM 60

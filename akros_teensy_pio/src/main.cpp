@@ -58,7 +58,7 @@ void twist_cb(const geometry_msgs::Point& msg){
 //Mode callback - constructs mode message and stores in a global variable
 void mode_cb(const std_msgs::UInt32& msg){
   std_msgs::UInt32 message = msg;
-  for(int i=0; i<5; i++){
+  for(int i=0; i<2; i++){
     mode_msg[i] = message.data%10 != 0 ? true:false;
     message.data /= 10;
   }
